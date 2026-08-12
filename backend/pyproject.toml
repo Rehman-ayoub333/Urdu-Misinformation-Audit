@@ -1,0 +1,48 @@
+# Backend tooling configuration.
+# This project is an application, not a distributable package — there is
+# deliberately no [build-system] table. The [project] table exists to pin the
+# interpreter and to give ruff/mypy a single authoritative target version.
+
+[project]
+name = "urdu-misinfo-audit-backend"
+version = "0.0.0"
+description = "FastAPI inference service for the Urdu misinformation audit platform"
+# Python 3.11 exactly, per REPRODUCIBILITY.md Section 1 and DECISION_REGISTER.md E6.
+# Runtime dependencies are pinned in requirements.txt, which is what both the
+# Dockerfile (DEPLOYMENT_PLAN.md Section 2) and CI install from.
+requires-python = "==3.11.*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Resolve first-party imports from `backend/`, so `app.*` sorts as first-party.
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app", "tests"]
+strict = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# `backend/` itself on sys.path, so tests import `app.main` the same way uvicorn
+# resolves `app.main:app`. Without this, pytest would only put `tests/` on the path.
+pythonpath = ["."]
+# Slow tests that load the real checkpoint are marked and excluded from the
+# default run (TESTING_STRATEGY.md Section 1, conftest.py note). Registered now
+# so the marker is never an unknown-mark warning once Milestone 6 uses it.
+markers = [
+    "integration: exercises the real model checkpoint; slow, excluded from the unit run",
+]

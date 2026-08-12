@@ -1,0 +1,22 @@
+# Backend runtime + tooling dependencies.
+# Every version is pinned with `==`, never `>=` (REPRODUCIBILITY.md Section 1).
+# Target interpreter: Python 3.11 exactly (backend/pyproject.toml).
+#
+# Scope note: this file lists only what the code in this repository currently
+# imports. The ML serving stack (torch, transformers, captum) and the request-path
+# libraries (slowapi per E10, trafilatura per E11, pydantic-settings per E16) are
+# added at Milestone 6, when backend/app/ actually imports them — adding them to a
+# scaffold that does not use them would violate CLAUDE.md rule 16 and would make CI
+# install ~2 GB of wheels to test a placeholder endpoint.
+
+# --- Web framework (DECISION_REGISTER.md E6) ---
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
+
+# --- Testing (DECISION_REGISTER.md E13) ---
+pytest==9.1.1
+httpx==0.28.1
+
+# --- Lint / type checking (CLAUDE.md rule 7, DEPLOYMENT_PLAN.md Section 5) ---
+ruff==0.16.2
+mypy==2.3.0
