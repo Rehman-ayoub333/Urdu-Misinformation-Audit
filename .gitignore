@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# What is committed vs. gitignored is specified in GITHUB_PLAN.md Section 3.
+# Committed: all source, research/data/splits/, research/data/audit/,
+# research/results/, research/configs/, docs/.
+# ---------------------------------------------------------------------------
+
+# --- Datasets: never redistributed from this repository (GITHUB_PLAN.md S2) ---
+# research/src/data/download.py fetches these from their original sources.
+# The directories themselves are kept so the tree in ARCHITECTURE.md S4 is real.
+research/data/raw/*
+!research/data/raw/.gitkeep
+research/data/clean/*
+!research/data/clean/.gitkeep
+research/data/processed/*
+!research/data/processed/.gitkeep
+
+# --- Model checkpoints: live on the HF Model Hub, not in git (E17) ---
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+*.ckpt
+
+# --- Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Test / tooling output ---
+coverage/
+playwright-report/
+test-results/
+.playwright/
+
+# --- Experiment tracking (MASTER_PROJECT_BLUEPRINT.md Part 26) ---
+wandb/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
