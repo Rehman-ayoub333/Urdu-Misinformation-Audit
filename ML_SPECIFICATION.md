@@ -32,9 +32,28 @@ Loaded **once**, at FastAPI startup (`app/main.py`'s lifespan handler), from `MO
 
 ## 3. Sequence length
 
-**Provisional default: 384 subword tokens**, truncation from the end (Ax-to-Grind's real-article median is short per the literature; 384 comfortably covers most real articles while bounding the small number of very long fake articles central to the length-confound research question — capping too aggressively by default would itself interfere with RQ1/RQ2's undisturbed measurement, so this value is for **serving**, not for the RQ1–RQ3 training/evaluation runs, which use the full, uncapped Tier-2-cleaned text per `MASTER_PROJECT_BLUEPRINT.md` Part 8).
+**RESOLVED at Milestone 2: `MAX_SEQ_LEN = 512` subword tokens**, truncation from the end. This supersedes the provisional 384 (`DECISION_REGISTER.md` U2 → M2-1). This value governs **serving only** — the RQ1–RQ3 training/evaluation runs use the full, uncapped Tier-2-cleaned text per `MASTER_PROJECT_BLUEPRINT.md` Part 8, because capping by default would pre-empt the very confound RQ3 measures.
 
-`DECISION REQUIRED` (`DECISION_REGISTER.md` U2): finalize this number once `research/data/audit/` produces the real subword-length distribution (Milestone 2, `ROADMAP.md`). Update this section and `app/config.py`'s default together when resolved.
+**Evidence** (`research/data/audit/dataset_quality_report.json`, real `xlm-roberta-base` tokenizer over Tier-2-cleaned text):
+
+| Dataset | median | p90 | p95 | p99 | max |
+|---|---|---|---|---|---|
+| Ax-to-Grind (n=10,083) | 40 | 200 | 496 | 1,045 | 1,447 |
+| Notri-Fact (n=13,388) | 201 | 306 | 349 | 482 | 2,217 |
+
+Share of articles that fit **without truncation**:
+
+| max_length | Ax-to-Grind | Notri-Fact | combined |
+|---|---|---|---|
+| 256 | 91.5% | 76.6% | 83.0% |
+| 384 (old provisional) | 93.8% | 97.0% | 95.6% |
+| **512 (chosen)** | **95.3%** | **99.2%** | **97.5%** |
+
+**Why 512.** It is XLM-R's architectural maximum (512 learned position embeddings), so no larger value is available. Serving input is a user-pasted news article, which resembles Notri-Fact's full articles far more than Ax-to-Grind's headline-length snippets (median 40 tokens — Ax-to-Grind is largely headlines, not article bodies), making Notri-Fact's 99.2% the more representative coverage figure. Moving 384 → 512 costs nothing architecturally and recovers the 384–512 band, which is densely populated in exactly the full-article shape real users submit.
+
+**Cost and fallback.** 512 raises per-request attention cost roughly 1.8× over 384 on the free-tier CPU. If measured latency at Milestone 9 breaches `BACKEND_SPECIFICATION.md`'s <2 s target, the documented order of remedies is (1) resolve `DECISION_REGISTER.md` U4 (quantization) — the lever intended for exactly this, then (2) fall back to 384, accepting 95.6% combined coverage. Reducing below 384 is not acceptable: 256 truncates 23% of full-article-shaped input.
+
+Keep `app/config.py`'s `MAX_TEXT_LENGTH` default in sync with this number when the backend is implemented (Milestone 6).
 
 ## 4. Non-Urdu / script detection
 
