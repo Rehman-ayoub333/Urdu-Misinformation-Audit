@@ -6,8 +6,20 @@ Full rationale and comparison matrix: `MASTER_PROJECT_BLUEPRINT.md` Parts 6–9.
 
 | Dataset | Role | Source |
 |---|---|---|
-| Ax-to-Grind Urdu (10,083 articles) | Primary training set | `github.com/Sheetal83/Ax-to-Grind-Urdu-Dataset` (`Fake News.csv`, `True News.csv`) |
-| Notri-Fact Urdu (13,388 articles) | Cross-dataset test set (never trained on) | Kaggle: `tridata/notri-fact-real-and-unreal-urdu-news` |
+| Ax-to-Grind Urdu (10,083 articles) | Primary training set | `github.com/Sheetal83/Ax-to-Grind-Urdu-Dataset` — **the pipeline reads `Combined .csv`** (see below) |
+| Notri-Fact Urdu (13,388 articles) | Cross-dataset test set (never trained on) | Kaggle: `tridata/notri-fact-real-and-unreal-urdu-news` (single `.xlsx` workbook) |
+
+**Ax-to-Grind source file (`DECISION_REGISTER.md` M1-3, approved).** This table originally named `Fake News.csv` and `True News.csv`. That was wrong about the upstream repository's contents, which Milestone 1 measured and independently re-verified:
+
+| File | Read by the pipeline? | State |
+|---|---|---|
+| `Combined .csv` | **Yes — sole text source** | Comma-separated, UTF-8+BOM, intact. 5,053 FAKE + 5,030 TRUE = 10,083 rows. |
+| `True News.csv` | Cross-check only | Intact, but the TRUE half only. `validate.py::cross_check_true_news` asserts its 5,030 rows equal `Combined .csv`'s TRUE rows as a multiset — it is never a text source. |
+| `Fake News.csv` | No — evidence only | **Corrupt upstream.** Despite its name it holds the full dataset, and a lossy encoding conversion replaced every Urdu character with a literal `?` (2,694,909 of 3,664,112 bytes, 73.5%). `validate.py::check_fake_news_still_corrupt` asserts it is *still* broken, so a silent upstream fix is noticed rather than changing the dataset unannounced. |
+
+Fake-labelled Urdu text exists **only** in `Combined .csv`; reading the two originally-named files would yield zero usable fake training text.
+
+**Known raw-file issues, handled explicitly in `validate.py` (not left to surface downstream):** 22 fully-blank trailing rows (raw indices 10084–10105) and 1 stray repeated header row at raw index 5053 — the seam where the FAKE and TRUE blocks were concatenated — are dropped with logged counts, taking 10,106 raw rows to exactly the documented 10,083. 47 labels carrying trailing whitespace (`"TRUE "` ×33, `"FAKE "` ×14) are normalised rather than dropped, since their intent is unambiguous. Note also that `Sr. No.` restarts at 1 for the TRUE block, so it has 5,051 duplicate values and is **not** usable as a row identifier; `validate.py` assigns stable `axg-#####` / `ntf-#####` ids from raw-file position instead, which is what makes the committed split index files reproducible.
 | UFND (14,178 articles) | Optional secondary — `DECISION REQUIRED` U1 | Link not yet located; attempt via the paper's Data Availability Statement in Milestone 1 |
 
 ## 2. Pipeline (`research/src/data/`, executed in this order — matches `MASTER_PROJECT_BLUEPRINT.md` Part 20)
