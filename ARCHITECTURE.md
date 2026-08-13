@@ -230,12 +230,19 @@ urdu-misinfo-audit/
 │   ├── styles/
 │   │   └── globals.css                # design tokens per FRONTEND_SPECIFICATION.md
 │   ├── tests/
-│   │   ├── unit/ (Vitest + RTL)
+│   │   ├── unit/ (Vitest + RTL)     # plus setup.ts, registering jest-dom matchers
 │   │   └── e2e/ (Playwright)
 │   ├── public/
 │   ├── next.config.js
 │   ├── tailwind.config.ts
-│   └── package.json
+│   ├── postcss.config.js              # Tailwind + autoprefixer pipeline
+│   ├── tsconfig.json
+│   ├── eslint.config.mjs              # flat config; eslint-config-next 16 exports flat arrays directly, so no FlatCompat shim
+│   ├── vitest.config.ts               # E14 unit suite; excludes tests/e2e/
+│   ├── playwright.config.ts           # E14 E2E; Chromium only, self-starting webServer
+│   ├── components.json                # shadcn/ui CLI config (E3) — lets `npx shadcn add` emit working components at Milestone 7 with no reconfiguration
+│   ├── package.json
+│   └── package-lock.json              # committed, per REPRODUCIBILITY.md Section 1
 │
 ├── thesis/                            # LaTeX/Markdown source, per THESIS_PLAN.md
 │
