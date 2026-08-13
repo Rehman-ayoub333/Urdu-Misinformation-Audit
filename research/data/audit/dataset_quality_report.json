@@ -1,0 +1,1972 @@
+{
+  "tokenizer": "xlm-roberta-base",
+  "datasets": {
+    "ax_to_grind": {
+      "dataset": "ax_to_grind",
+      "tokenizer": "xlm-roberta-base",
+      "size_and_class": {
+        "n_rows": 10083,
+        "class_counts": {
+          "fake": 5053,
+          "real": 5030
+        },
+        "class_balance": {
+          "fake": 0.5011,
+          "real": 0.4989
+        }
+      },
+      "length_distribution": {
+        "n_chars": {
+          "overall": {
+            "count": 10083,
+            "mean": 345.05494396508976,
+            "std": 670.053046747323,
+            "min": 13.0,
+            "p50": 143.0,
+            "p75": 235.0,
+            "p90": 724.0,
+            "p95": 1771.8999999999996,
+            "p97.5": 2596.7999999999956,
+            "p99": 3791.9600000000064,
+            "p99.5": 4616.950000000001,
+            "p100": 5220.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 5053,
+              "mean": 527.5570947951712,
+              "std": 907.688561075327,
+              "min": 13.0,
+              "p50": 112.0,
+              "p75": 498.0,
+              "p90": 1770.8000000000002,
+              "p95": 2594.5999999999985,
+              "p97.5": 3391.0999999999995,
+              "p99": 4616.399999999998,
+              "p99.5": 4787.74,
+              "p100": 5220.0
+            },
+            "real": {
+              "count": 5030,
+              "mean": 161.71829025844931,
+              "std": 73.02878462519428,
+              "min": 25.0,
+              "p50": 158.0,
+              "p75": 211.0,
+              "p90": 249.0,
+              "p95": 273.0,
+              "p97.5": 298.0,
+              "p99": 366.4200000000001,
+              "p99.5": 428.41999999999825,
+              "p100": 827.0
+            }
+          },
+          "fake_minus_real_median": -46.0,
+          "median_ratio_fake_over_real": 0.709
+        },
+        "n_words": {
+          "overall": {
+            "count": 10083,
+            "mean": 75.23197461073093,
+            "std": 148.40638767497884,
+            "min": 3.0,
+            "p50": 30.0,
+            "p75": 50.0,
+            "p90": 157.0,
+            "p95": 389.0,
+            "p97.5": 581.0,
+            "p99": 838.5400000000009,
+            "p99.5": 1010.5900000000001,
+            "p100": 1188.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 5053,
+              "mean": 115.83158519691273,
+              "std": 201.0028537231993,
+              "min": 3.0,
+              "p50": 24.0,
+              "p75": 107.0,
+              "p90": 389.0,
+              "p95": 581.0,
+              "p97.5": 758.0,
+              "p99": 1010.4799999999996,
+              "p99.5": 1056.0,
+              "p100": 1188.0
+            },
+            "real": {
+              "count": 5030,
+              "mean": 34.44671968190855,
+              "std": 15.720422399810547,
+              "min": 4.0,
+              "p50": 34.0,
+              "p75": 45.0,
+              "p90": 53.0,
+              "p95": 59.0,
+              "p97.5": 65.0,
+              "p99": 79.0,
+              "p99.5": 90.70999999999913,
+              "p100": 190.0
+            }
+          },
+          "fake_minus_real_median": -10.0,
+          "median_ratio_fake_over_real": 0.706
+        },
+        "n_subwords": {
+          "overall": {
+            "count": 10083,
+            "mean": 96.8517306357235,
+            "std": 185.47672064103375,
+            "min": 7.0,
+            "p50": 40.0,
+            "p75": 65.0,
+            "p90": 200.0,
+            "p95": 495.7999999999993,
+            "p97.5": 724.0,
+            "p99": 1045.4400000000023,
+            "p99.5": 1276.0,
+            "p100": 1447.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 5053,
+              "mean": 147.35464080744111,
+              "std": 251.30995933677468,
+              "min": 7.0,
+              "p50": 33.0,
+              "p75": 139.0,
+              "p90": 493.8000000000002,
+              "p95": 724.0,
+              "p97.5": 954.1999999999989,
+              "p99": 1276.0,
+              "p99.5": 1345.7399999999998,
+              "p100": 1447.0
+            },
+            "real": {
+              "count": 5030,
+              "mean": 46.11789264413519,
+              "std": 19.614078816580502,
+              "min": 9.0,
+              "p50": 45.0,
+              "p75": 58.0,
+              "p90": 70.0,
+              "p95": 77.0,
+              "p97.5": 83.0,
+              "p99": 100.0,
+              "p99.5": 121.70999999999913,
+              "p100": 231.0
+            }
+          },
+          "fake_minus_real_median": -12.0,
+          "median_ratio_fake_over_real": 0.733
+        }
+      },
+      "vocabulary": {
+        "vocab_size_fake": 26086,
+        "vocab_size_real": 13722,
+        "top_words_fake": [
+          {
+            "word": "کے",
+            "count": 26973
+          },
+          {
+            "word": "کی",
+            "count": 17469
+          },
+          {
+            "word": "میں",
+            "count": 17186
+          },
+          {
+            "word": "،",
+            "count": 11387
+          },
+          {
+            "word": "سے",
+            "count": 11309
+          },
+          {
+            "word": "کو",
+            "count": 10864
+          },
+          {
+            "word": "نے",
+            "count": 10606
+          },
+          {
+            "word": "ہے",
+            "count": 10421
+          },
+          {
+            "word": "اور",
+            "count": 9888
+          },
+          {
+            "word": "کہ",
+            "count": 8516
+          },
+          {
+            "word": "کا",
+            "count": 8227
+          },
+          {
+            "word": "اس",
+            "count": 8131
+          },
+          {
+            "word": "پر",
+            "count": 7280
+          },
+          {
+            "word": "ایک",
+            "count": 5545
+          },
+          {
+            "word": "ہے۔",
+            "count": 4733
+          },
+          {
+            "word": "یہ",
+            "count": 4437
+          },
+          {
+            "word": "نہیں",
+            "count": 4417
+          },
+          {
+            "word": "کیا",
+            "count": 4345
+          },
+          {
+            "word": "ہیں",
+            "count": 4182
+          },
+          {
+            "word": "وہ",
+            "count": 3768
+          },
+          {
+            "word": "کرنے",
+            "count": 3665
+          },
+          {
+            "word": "ان",
+            "count": 3111
+          },
+          {
+            "word": "لئے",
+            "count": 3054
+          },
+          {
+            "word": "بھی",
+            "count": 3015
+          },
+          {
+            "word": "کر",
+            "count": 2515
+          },
+          {
+            "word": "ہیں۔",
+            "count": 2280
+          },
+          {
+            "word": "جو",
+            "count": 2230
+          },
+          {
+            "word": "گیا",
+            "count": 2160
+          },
+          {
+            "word": "ساتھ",
+            "count": 2043
+          },
+          {
+            "word": "جس",
+            "count": 2018
+          }
+        ],
+        "top_words_real": [
+          {
+            "word": "کے",
+            "count": 9281
+          },
+          {
+            "word": "کی",
+            "count": 5561
+          },
+          {
+            "word": "میں",
+            "count": 5482
+          },
+          {
+            "word": "کو",
+            "count": 3422
+          },
+          {
+            "word": "سے",
+            "count": 3363
+          },
+          {
+            "word": "نے",
+            "count": 3204
+          },
+          {
+            "word": "اور",
+            "count": 2755
+          },
+          {
+            "word": "کا",
+            "count": 2629
+          },
+          {
+            "word": "پر",
+            "count": 2280
+          },
+          {
+            "word": "کہ",
+            "count": 1753
+          },
+          {
+            "word": "ہے",
+            "count": 1718
+          },
+          {
+            "word": "ہے۔",
+            "count": 1718
+          },
+          {
+            "word": "ایک",
+            "count": 1634
+          },
+          {
+            "word": "پاکستان",
+            "count": 1387
+          },
+          {
+            "word": "لیے",
+            "count": 1134
+          },
+          {
+            "word": "کر",
+            "count": 1123
+          },
+          {
+            "word": "کیا",
+            "count": 1092
+          },
+          {
+            "word": "اس",
+            "count": 1089
+          },
+          {
+            "word": "کرنے",
+            "count": 909
+          },
+          {
+            "word": "ان",
+            "count": 675
+          },
+          {
+            "word": "ہیں۔",
+            "count": 625
+          },
+          {
+            "word": "یہ",
+            "count": 611
+          },
+          {
+            "word": "نہیں",
+            "count": 583
+          },
+          {
+            "word": "کہا",
+            "count": 550
+          },
+          {
+            "word": "گیا",
+            "count": 534
+          },
+          {
+            "word": "پی",
+            "count": 511
+          },
+          {
+            "word": "بعد",
+            "count": 508
+          },
+          {
+            "word": "بھی",
+            "count": 504
+          },
+          {
+            "word": "ہیں",
+            "count": 495
+          },
+          {
+            "word": "ساتھ",
+            "count": 494
+          }
+        ],
+        "min_count_for_log_odds": 20,
+        "most_fake_associated": [
+          {
+            "word": "کلنٹن",
+            "log_odds": 4.8875,
+            "fake_count": 447,
+            "real_count": 0
+          },
+          {
+            "word": "ہلیری",
+            "log_odds": 4.5257,
+            "fake_count": 311,
+            "real_count": 0
+          },
+          {
+            "word": "اوبامہ",
+            "log_odds": 4.2208,
+            "fake_count": 229,
+            "real_count": 0
+          },
+          {
+            "word": "(@",
+            "log_odds": 4.1203,
+            "fake_count": 207,
+            "real_count": 0
+          },
+          {
+            "word": "کررہے",
+            "log_odds": 3.9185,
+            "fake_count": 169,
+            "real_count": 0
+          },
+          {
+            "word": "لہذا",
+            "log_odds": 3.9007,
+            "fake_count": 166,
+            "real_count": 0
+          },
+          {
+            "word": "فاکس",
+            "log_odds": 3.8197,
+            "fake_count": 153,
+            "real_count": 0
+          },
+          {
+            "word": "ریپبلکن",
+            "log_odds": 3.7967,
+            "fake_count": 300,
+            "real_count": 1
+          },
+          {
+            "word": "شامی",
+            "log_odds": 3.688,
+            "fake_count": 134,
+            "real_count": 0
+          },
+          {
+            "word": "کرونا",
+            "log_odds": 3.6655,
+            "fake_count": 131,
+            "real_count": 0
+          },
+          {
+            "word": "#",
+            "log_odds": 3.5012,
+            "fake_count": 111,
+            "real_count": 0
+          },
+          {
+            "word": "اوباما",
+            "log_odds": 3.4952,
+            "fake_count": 333,
+            "real_count": 2
+          },
+          {
+            "word": "ل",
+            "log_odds": 3.4741,
+            "fake_count": 108,
+            "real_count": 0
+          },
+          {
+            "word": "ٹرمپ",
+            "log_odds": 3.4659,
+            "fake_count": 1837,
+            "real_count": 16
+          },
+          {
+            "word": "حلب",
+            "log_odds": 3.4555,
+            "fake_count": 106,
+            "real_count": 0
+          },
+          {
+            "word": "ہیلری",
+            "log_odds": 3.3153,
+            "fake_count": 92,
+            "real_count": 0
+          },
+          {
+            "word": "@",
+            "log_odds": 3.2936,
+            "fake_count": 90,
+            "real_count": 0
+          },
+          {
+            "word": "امیگریشن",
+            "log_odds": 3.2601,
+            "fake_count": 87,
+            "real_count": 0
+          },
+          {
+            "word": "ورزش",
+            "log_odds": 3.2135,
+            "fake_count": 83,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیموکریٹس",
+            "log_odds": 3.2076,
+            "fake_count": 166,
+            "real_count": 1
+          },
+          {
+            "word": "ڈونلڈ",
+            "log_odds": 3.1955,
+            "fake_count": 494,
+            "real_count": 5
+          },
+          {
+            "word": "ڈاٹ",
+            "log_odds": 3.1265,
+            "fake_count": 76,
+            "real_count": 0
+          },
+          {
+            "word": "انٹلیجنس",
+            "log_odds": 3.0868,
+            "fake_count": 73,
+            "real_count": 0
+          },
+          {
+            "word": "ہیک",
+            "log_odds": 2.9571,
+            "fake_count": 64,
+            "real_count": 0
+          },
+          {
+            "word": "صحیح",
+            "log_odds": 2.9416,
+            "fake_count": 63,
+            "real_count": 0
+          },
+          {
+            "word": ")",
+            "log_odds": 2.8936,
+            "fake_count": 60,
+            "real_count": 0
+          },
+          {
+            "word": "،",
+            "log_odds": 2.8708,
+            "fake_count": 11387,
+            "real_count": 190
+          },
+          {
+            "word": "جارہے",
+            "log_odds": 2.8603,
+            "fake_count": 58,
+            "real_count": 0
+          },
+          {
+            "word": "کامی",
+            "log_odds": 2.8432,
+            "fake_count": 57,
+            "real_count": 0
+          },
+          {
+            "word": "سینڈرز",
+            "log_odds": 2.8432,
+            "fake_count": 57,
+            "real_count": 0
+          }
+        ],
+        "most_real_associated": [
+          {
+            "word": "پڑھیے",
+            "log_odds": -5.2603,
+            "fake_count": 0,
+            "real_count": 56
+          },
+          {
+            "word": "لکھوی",
+            "log_odds": -4.7726,
+            "fake_count": 0,
+            "real_count": 34
+          },
+          {
+            "word": "لشکر",
+            "log_odds": -4.6513,
+            "fake_count": 0,
+            "real_count": 30
+          },
+          {
+            "word": "کالم۔",
+            "log_odds": -4.6513,
+            "fake_count": 0,
+            "real_count": 30
+          },
+          {
+            "word": "کہا،",
+            "log_odds": -4.6185,
+            "fake_count": 0,
+            "real_count": 29
+          },
+          {
+            "word": "ہوئے،",
+            "log_odds": -4.6185,
+            "fake_count": 1,
+            "real_count": 59
+          },
+          {
+            "word": "ذکی",
+            "log_odds": -4.4754,
+            "fake_count": 0,
+            "real_count": 25
+          },
+          {
+            "word": "راجیہ",
+            "log_odds": -4.4362,
+            "fake_count": 0,
+            "real_count": 24
+          },
+          {
+            "word": "پروٹیز",
+            "log_odds": -4.3953,
+            "fake_count": 0,
+            "real_count": 23
+          },
+          {
+            "word": "عاصمہ",
+            "log_odds": -4.3528,
+            "fake_count": 0,
+            "real_count": 22
+          },
+          {
+            "word": "سیاحت",
+            "log_odds": -4.3528,
+            "fake_count": 0,
+            "real_count": 22
+          },
+          {
+            "word": "شیرازی",
+            "log_odds": -4.3083,
+            "fake_count": 0,
+            "real_count": 21
+          },
+          {
+            "word": "نیوز:",
+            "log_odds": -3.9581,
+            "fake_count": 1,
+            "real_count": 30
+          },
+          {
+            "word": "چاہیے۔",
+            "log_odds": -3.9253,
+            "fake_count": 1,
+            "real_count": 29
+          },
+          {
+            "word": "میں،",
+            "log_odds": -3.7745,
+            "fake_count": 9,
+            "real_count": 128
+          },
+          {
+            "word": "سے،",
+            "log_odds": -3.743,
+            "fake_count": 1,
+            "real_count": 24
+          },
+          {
+            "word": "گئی،",
+            "log_odds": -3.7022,
+            "fake_count": 1,
+            "real_count": 23
+          },
+          {
+            "word": "پرل",
+            "log_odds": -3.6596,
+            "fake_count": 1,
+            "real_count": 22
+          },
+          {
+            "word": "ہریانہ",
+            "log_odds": -3.645,
+            "fake_count": 2,
+            "real_count": 33
+          },
+          {
+            "word": "کیس:",
+            "log_odds": -3.5687,
+            "fake_count": 1,
+            "real_count": 20
+          },
+          {
+            "word": "سیلسیس",
+            "log_odds": -3.5687,
+            "fake_count": 1,
+            "real_count": 20
+          },
+          {
+            "word": "پختونخوا",
+            "log_odds": -3.5199,
+            "fake_count": 1,
+            "real_count": 19
+          },
+          {
+            "word": "ہماچل",
+            "log_odds": -3.5199,
+            "fake_count": 1,
+            "real_count": 19
+          },
+          {
+            "word": "جموں",
+            "log_odds": -3.5067,
+            "fake_count": 22,
+            "real_count": 226
+          },
+          {
+            "word": "سبھا",
+            "log_odds": -3.4365,
+            "fake_count": 4,
+            "real_count": 45
+          },
+          {
+            "word": "ویکسینیشن",
+            "log_odds": -3.4145,
+            "fake_count": 3,
+            "real_count": 35
+          },
+          {
+            "word": "خیبر",
+            "log_odds": -3.3863,
+            "fake_count": 3,
+            "real_count": 34
+          },
+          {
+            "word": "(ایل",
+            "log_odds": -3.3863,
+            "fake_count": 3,
+            "real_count": 34
+          },
+          {
+            "word": "ساتھ،",
+            "log_odds": -3.3768,
+            "fake_count": 2,
+            "real_count": 25
+          },
+          {
+            "word": "بعد،",
+            "log_odds": -3.3573,
+            "fake_count": 5,
+            "real_count": 50
+          }
+        ]
+      },
+      "source_domain": {
+        "has_source_or_domain_field": false,
+        "columns_available": [
+          "row_id",
+          "text",
+          "label"
+        ],
+        "limitation": "ax_to_grind as published carries no domain, source, publisher, author or date field. Part 7 item 4's source-label cross-tab CANNOT be computed, so the source-leakage risk in the Risk Register is UNTESTABLE for this dataset — not absent, untested. Grouped splitting by publisher is also impossible, so split.py uses plain stratification."
+      },
+      "structural_artifacts": {
+        "boilerplate": {
+          "read_more_ur": {
+            "probe": "مزید پڑھیں",
+            "by_label": {
+              "fake": {
+                "count": 12,
+                "rate": 0.00237
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "our_correspondent_ur": {
+            "probe": "نامہ نگار",
+            "by_label": {
+              "fake": {
+                "count": 16,
+                "rate": 0.00317
+              },
+              "real": {
+                "count": 2,
+                "rate": 0.0004
+              }
+            }
+          },
+          "report_ur": {
+            "probe": "رپورٹ",
+            "by_label": {
+              "fake": {
+                "count": 292,
+                "rate": 0.05779
+              },
+              "real": {
+                "count": 127,
+                "rate": 0.02525
+              }
+            }
+          },
+          "news_agency_ur": {
+            "probe": "خبر رساں ادارے",
+            "by_label": {
+              "fake": {
+                "count": 12,
+                "rate": 0.00237
+              },
+              "real": {
+                "count": 4,
+                "rate": 0.0008
+              }
+            }
+          },
+          "according_to_sources_ur": {
+            "probe": "ذرائع کے مطابق",
+            "by_label": {
+              "fake": {
+                "count": 26,
+                "rate": 0.00515
+              },
+              "real": {
+                "count": 5,
+                "rate": 0.00099
+              }
+            }
+          },
+          "file_photo_ur": {
+            "probe": "فائل فوٹو",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "read_more_en": {
+            "probe": "read more",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "click_here_en": {
+            "probe": "click here",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          }
+        },
+        "punctuation_density_by_label": {
+          "fake": {
+            "mean_punctuation_density": 0.01018,
+            "median_punctuation_density": 0.0101
+          },
+          "real": {
+            "mean_punctuation_density": 0.01472,
+            "median_punctuation_density": 0.01258
+          }
+        },
+        "non_alphanumeric_inventory": {
+          "distinct_characters": 47,
+          "total_occurrences": 48657,
+          "top_20": [
+            {
+              "char": "۔",
+              "count": 20553
+            },
+            {
+              "char": "،",
+              "count": 15811
+            },
+            {
+              "char": ":",
+              "count": 2218
+            },
+            {
+              "char": ")",
+              "count": 1617
+            },
+            {
+              "char": "(",
+              "count": 1585
+            },
+            {
+              "char": "؟",
+              "count": 1052
+            },
+            {
+              "char": ".",
+              "count": 887
+            },
+            {
+              "char": "-",
+              "count": 799
+            },
+            {
+              "char": "\"",
+              "count": 716
+            },
+            {
+              "char": "'",
+              "count": 704
+            },
+            {
+              "char": "!",
+              "count": 438
+            },
+            {
+              "char": "’",
+              "count": 406
+            },
+            {
+              "char": "‘",
+              "count": 395
+            },
+            {
+              "char": "@",
+              "count": 299
+            },
+            {
+              "char": ",",
+              "count": 158
+            },
+            {
+              "char": "/",
+              "count": 153
+            },
+            {
+              "char": "[",
+              "count": 140
+            },
+            {
+              "char": "]",
+              "count": 139
+            },
+            {
+              "char": "#",
+              "count": 127
+            },
+            {
+              "char": "$",
+              "count": 84
+            }
+          ]
+        }
+      },
+      "language_mixing": {
+        "fake": {
+          "mean_latin_char_share": 0.00181,
+          "mean_arabic_char_share": 0.78404,
+          "rows_with_any_latin": 416,
+          "rows_over_10pct_latin": 9
+        },
+        "real": {
+          "mean_latin_char_share": 0.00268,
+          "mean_arabic_char_share": 0.77838,
+          "rows_with_any_latin": 374,
+          "rows_over_10pct_latin": 19
+        }
+      },
+      "leakage_checklist": {
+        "has_temporal_field": false,
+        "has_author_or_byline_field": false,
+        "note": "ax_to_grind: no temporal field, so the temporal-holdout robustness check in blueprint Part 9 is not possible."
+      }
+    },
+    "notri_fact": {
+      "dataset": "notri_fact",
+      "tokenizer": "xlm-roberta-base",
+      "size_and_class": {
+        "n_rows": 13388,
+        "class_counts": {
+          "fake": 6711,
+          "real": 6677
+        },
+        "class_balance": {
+          "fake": 0.5013,
+          "real": 0.4987
+        }
+      },
+      "length_distribution": {
+        "n_chars": {
+          "overall": {
+            "count": 13388,
+            "mean": 730.031147296086,
+            "std": 328.4353689688729,
+            "min": 152.0,
+            "p50": 700.0,
+            "p75": 888.0,
+            "p90": 1082.0,
+            "p95": 1232.6499999999996,
+            "p97.5": 1405.324999999999,
+            "p99": 1710.9099999999944,
+            "p99.5": 2083.5850000000046,
+            "p100": 8013.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 6711,
+              "mean": 753.2375204887499,
+              "std": 267.6532733279208,
+              "min": 154.0,
+              "p50": 732.0,
+              "p75": 901.0,
+              "p90": 1083.0,
+              "p95": 1217.0,
+              "p97.5": 1345.0,
+              "p99": 1537.699999999999,
+              "p99.5": 1688.899999999996,
+              "p100": 2702.0
+            },
+            "real": {
+              "count": 6677,
+              "mean": 706.706604762618,
+              "std": 378.43957749747375,
+              "min": 152.0,
+              "p50": 663.0,
+              "p75": 872.0,
+              "p90": 1078.0,
+              "p95": 1257.0,
+              "p97.5": 1490.0999999999995,
+              "p99": 1954.1199999999972,
+              "p99.5": 2478.2999999999984,
+              "p100": 8013.0
+            }
+          },
+          "fake_minus_real_median": 69.0,
+          "median_ratio_fake_over_real": 1.104
+        },
+        "n_words": {
+          "overall": {
+            "count": 13388,
+            "mean": 153.01030773827307,
+            "std": 70.4974484298443,
+            "min": 27.0,
+            "p50": 146.0,
+            "p75": 187.0,
+            "p90": 228.0,
+            "p95": 260.0,
+            "p97.5": 298.0,
+            "p99": 361.0,
+            "p99.5": 444.1950000000015,
+            "p100": 1744.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 6711,
+              "mean": 157.16241990761438,
+              "std": 57.609473267674844,
+              "min": 27.0,
+              "p50": 152.0,
+              "p75": 189.0,
+              "p90": 229.0,
+              "p95": 256.0,
+              "p97.5": 285.0,
+              "p99": 324.89999999999964,
+              "p99.5": 361.4499999999998,
+              "p100": 578.0
+            },
+            "real": {
+              "count": 6677,
+              "mean": 148.8370525685188,
+              "std": 81.21165520331411,
+              "min": 28.0,
+              "p50": 139.0,
+              "p75": 183.0,
+              "p90": 227.0,
+              "p95": 265.0,
+              "p97.5": 317.0,
+              "p99": 418.71999999999935,
+              "p99.5": 544.8599999999997,
+              "p100": 1744.0
+            }
+          },
+          "fake_minus_real_median": 13.0,
+          "median_ratio_fake_over_real": 1.094
+        },
+        "n_subwords": {
+          "overall": {
+            "count": 13388,
+            "mean": 208.5877651628324,
+            "std": 92.76087835917313,
+            "min": 43.0,
+            "p50": 201.0,
+            "p75": 252.0,
+            "p90": 306.0,
+            "p95": 349.0,
+            "p97.5": 397.0,
+            "p99": 482.0,
+            "p99.5": 589.260000000002,
+            "p100": 2217.0
+          },
+          "by_label": {
+            "fake": {
+              "count": 6711,
+              "mean": 215.3357174787662,
+              "std": 74.94964293400254,
+              "min": 45.0,
+              "p50": 209.0,
+              "p75": 256.0,
+              "p90": 308.0,
+              "p95": 344.0,
+              "p97.5": 381.0,
+              "p99": 434.89999999999964,
+              "p99.5": 468.4499999999998,
+              "p100": 747.0
+            },
+            "real": {
+              "count": 6677,
+              "mean": 201.80545155009736,
+              "std": 107.31464874315027,
+              "min": 43.0,
+              "p50": 189.0,
+              "p75": 248.0,
+              "p90": 304.0,
+              "p95": 356.0,
+              "p97.5": 423.3999999999978,
+              "p99": 555.3199999999961,
+              "p99.5": 725.8199999999988,
+              "p100": 2217.0
+            }
+          },
+          "fake_minus_real_median": 20.0,
+          "median_ratio_fake_over_real": 1.106
+        }
+      },
+      "vocabulary": {
+        "vocab_size_fake": 41216,
+        "vocab_size_real": 39245,
+        "top_words_fake": [
+          {
+            "word": "کے",
+            "count": 41942
+          },
+          {
+            "word": "میں",
+            "count": 33955
+          },
+          {
+            "word": "کی",
+            "count": 31991
+          },
+          {
+            "word": "نے",
+            "count": 20310
+          },
+          {
+            "word": "کا",
+            "count": 19055
+          },
+          {
+            "word": "سے",
+            "count": 17768
+          },
+          {
+            "word": "ہے",
+            "count": 16957
+          },
+          {
+            "word": "اور",
+            "count": 16214
+          },
+          {
+            "word": "کو",
+            "count": 14312
+          },
+          {
+            "word": "پر",
+            "count": 12583
+          },
+          {
+            "word": "کر",
+            "count": 9474
+          },
+          {
+            "word": "ہیں",
+            "count": 7820
+          },
+          {
+            "word": "بھی",
+            "count": 7619
+          },
+          {
+            "word": "کہ",
+            "count": 7604
+          },
+          {
+            "word": "ایک",
+            "count": 6113
+          },
+          {
+            "word": "پاکستان",
+            "count": 5738
+          },
+          {
+            "word": "کیا",
+            "count": 5495
+          },
+          {
+            "word": "ٹیم",
+            "count": 5071
+          },
+          {
+            "word": "اس",
+            "count": 4966
+          },
+          {
+            "word": "فلم",
+            "count": 4849
+          },
+          {
+            "word": "ہو",
+            "count": 4384
+          },
+          {
+            "word": "گیا",
+            "count": 4249
+          },
+          {
+            "word": "تفصیلات",
+            "count": 4035
+          },
+          {
+            "word": "مطابق",
+            "count": 3655
+          },
+          {
+            "word": "دیا",
+            "count": 3606
+          },
+          {
+            "word": "میچ",
+            "count": 3486
+          },
+          {
+            "word": "دی",
+            "count": 3430
+          },
+          {
+            "word": "ان",
+            "count": 3347
+          },
+          {
+            "word": "دو",
+            "count": 3138
+          },
+          {
+            "word": "کرنے",
+            "count": 3117
+          }
+        ],
+        "top_words_real": [
+          {
+            "word": "میں",
+            "count": 34702
+          },
+          {
+            "word": "کے",
+            "count": 33913
+          },
+          {
+            "word": "کی",
+            "count": 30421
+          },
+          {
+            "word": "نے",
+            "count": 22229
+          },
+          {
+            "word": "سے",
+            "count": 18297
+          },
+          {
+            "word": "کا",
+            "count": 17293
+          },
+          {
+            "word": "اور",
+            "count": 15332
+          },
+          {
+            "word": "کو",
+            "count": 13849
+          },
+          {
+            "word": "پر",
+            "count": 12675
+          },
+          {
+            "word": "ہے",
+            "count": 11406
+          },
+          {
+            "word": "کر",
+            "count": 9122
+          },
+          {
+            "word": "بھی",
+            "count": 7689
+          },
+          {
+            "word": "ہیں",
+            "count": 6363
+          },
+          {
+            "word": "92",
+            "count": 6090
+          },
+          {
+            "word": "نیوز",
+            "count": 5966
+          },
+          {
+            "word": "ایک",
+            "count": 5667
+          },
+          {
+            "word": "ٹیم",
+            "count": 5657
+          },
+          {
+            "word": "کیا",
+            "count": 5580
+          },
+          {
+            "word": "پاکستان",
+            "count": 5418
+          },
+          {
+            "word": "کہ",
+            "count": 5156
+          },
+          {
+            "word": "گیا",
+            "count": 4418
+          },
+          {
+            "word": "ہو",
+            "count": 4263
+          },
+          {
+            "word": "میچ",
+            "count": 4057
+          },
+          {
+            "word": "رنز",
+            "count": 3800
+          },
+          {
+            "word": "اس",
+            "count": 3414
+          },
+          {
+            "word": "دیا",
+            "count": 3126
+          },
+          {
+            "word": "دی",
+            "count": 3083
+          },
+          {
+            "word": "ہوئے",
+            "count": 2837
+          },
+          {
+            "word": "کرنے",
+            "count": 2723
+          },
+          {
+            "word": "گئی",
+            "count": 2708
+          }
+        ],
+        "min_count_for_log_odds": 20,
+        "most_fake_associated": [
+          {
+            "word": "اینجلسویب",
+            "log_odds": 4.4064,
+            "fake_count": 86,
+            "real_count": 0
+          },
+          {
+            "word": "لاہور92نیوزپاکستان",
+            "log_odds": 4.3349,
+            "fake_count": 80,
+            "real_count": 0
+          },
+          {
+            "word": "شہریارخان",
+            "log_odds": 3.9108,
+            "fake_count": 52,
+            "real_count": 0
+          },
+          {
+            "word": "جاکووچ",
+            "log_odds": 3.8525,
+            "fake_count": 49,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکہالی",
+            "log_odds": 3.8525,
+            "fake_count": 49,
+            "real_count": 0
+          },
+          {
+            "word": "اویکنز",
+            "log_odds": 3.8525,
+            "fake_count": 49,
+            "real_count": 0
+          },
+          {
+            "word": "لاہور92نیوزپی",
+            "log_odds": 3.7906,
+            "fake_count": 46,
+            "real_count": 0
+          },
+          {
+            "word": "جائلز",
+            "log_odds": 3.7906,
+            "fake_count": 46,
+            "real_count": 0
+          },
+          {
+            "word": "دھرم",
+            "log_odds": 3.7017,
+            "fake_count": 42,
+            "real_count": 0
+          },
+          {
+            "word": "بلجیم",
+            "log_odds": 3.6782,
+            "fake_count": 41,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکبھارت",
+            "log_odds": 3.5781,
+            "fake_count": 37,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکپاکستان",
+            "log_odds": 3.5332,
+            "fake_count": 108,
+            "real_count": 2
+          },
+          {
+            "word": "شیوسینا",
+            "log_odds": 3.524,
+            "fake_count": 35,
+            "real_count": 0
+          },
+          {
+            "word": "ڈھاکاسپورٹس",
+            "log_odds": 3.524,
+            "fake_count": 35,
+            "real_count": 0
+          },
+          {
+            "word": "فیوریس",
+            "log_odds": 3.524,
+            "fake_count": 35,
+            "real_count": 0
+          },
+          {
+            "word": "ٹارزن",
+            "log_odds": 3.4958,
+            "fake_count": 34,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکپی",
+            "log_odds": 3.437,
+            "fake_count": 32,
+            "real_count": 0
+          },
+          {
+            "word": "تیزترین",
+            "log_odds": 3.437,
+            "fake_count": 32,
+            "real_count": 0
+          },
+          {
+            "word": "لاہور92نیوزقومی",
+            "log_odds": 3.437,
+            "fake_count": 32,
+            "real_count": 0
+          },
+          {
+            "word": "نواسن",
+            "log_odds": 3.4062,
+            "fake_count": 31,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکبھارتی",
+            "log_odds": 3.4062,
+            "fake_count": 31,
+            "real_count": 0
+          },
+          {
+            "word": "ابادویب",
+            "log_odds": 3.3417,
+            "fake_count": 29,
+            "real_count": 0
+          },
+          {
+            "word": "انوراگ",
+            "log_odds": 3.3417,
+            "fake_count": 29,
+            "real_count": 0
+          },
+          {
+            "word": "جکووچ",
+            "log_odds": 3.3417,
+            "fake_count": 29,
+            "real_count": 0
+          },
+          {
+            "word": "ڈیسکپاکستانی",
+            "log_odds": 3.3078,
+            "fake_count": 28,
+            "real_count": 0
+          },
+          {
+            "word": "دبئیسپورٹس",
+            "log_odds": 3.2363,
+            "fake_count": 53,
+            "real_count": 1
+          },
+          {
+            "word": "ہنگس",
+            "log_odds": 3.2363,
+            "fake_count": 26,
+            "real_count": 0
+          },
+          {
+            "word": "موبی",
+            "log_odds": 3.2363,
+            "fake_count": 26,
+            "real_count": 0
+          },
+          {
+            "word": "شارجہسپورٹس",
+            "log_odds": 3.1986,
+            "fake_count": 25,
+            "real_count": 0
+          },
+          {
+            "word": "لاہورسپورٹس",
+            "log_odds": 3.1986,
+            "fake_count": 103,
+            "real_count": 3
+          }
+        ],
+        "most_real_associated": [
+          {
+            "word": "کورونا",
+            "log_odds": -6.2939,
+            "fake_count": 0,
+            "real_count": 509
+          },
+          {
+            "word": "سلطانز",
+            "log_odds": -5.4348,
+            "fake_count": 0,
+            "real_count": 215
+          },
+          {
+            "word": "شفیع",
+            "log_odds": -4.994,
+            "fake_count": 0,
+            "real_count": 138
+          },
+          {
+            "word": "یووینٹس",
+            "log_odds": -4.2339,
+            "fake_count": 0,
+            "real_count": 64
+          },
+          {
+            "word": "میشا",
+            "log_odds": -4.2184,
+            "fake_count": 1,
+            "real_count": 127
+          },
+          {
+            "word": "ہمپٹن",
+            "log_odds": -4.1704,
+            "fake_count": 0,
+            "real_count": 60
+          },
+          {
+            "word": "قرنطینہ",
+            "log_odds": -4.1539,
+            "fake_count": 0,
+            "real_count": 59
+          },
+          {
+            "word": "ٹوٹنہم",
+            "log_odds": -4.0577,
+            "fake_count": 1,
+            "real_count": 108
+          },
+          {
+            "word": "کیجانب",
+            "log_odds": -3.9307,
+            "fake_count": 0,
+            "real_count": 47
+          },
+          {
+            "word": "دوایک",
+            "log_odds": -3.9097,
+            "fake_count": 0,
+            "real_count": 46
+          },
+          {
+            "word": "ڈنک",
+            "log_odds": -3.8662,
+            "fake_count": 0,
+            "real_count": 44
+          },
+          {
+            "word": "حسنین",
+            "log_odds": -3.8207,
+            "fake_count": 1,
+            "real_count": 85
+          },
+          {
+            "word": "خوشدل",
+            "log_odds": -3.7972,
+            "fake_count": 0,
+            "real_count": 41
+          },
+          {
+            "word": "2018",
+            "log_odds": -3.767,
+            "fake_count": 3,
+            "real_count": 162
+          },
+          {
+            "word": "انٹربینک",
+            "log_odds": -3.7484,
+            "fake_count": 1,
+            "real_count": 79
+          },
+          {
+            "word": "ماتھ",
+            "log_odds": -3.6704,
+            "fake_count": 0,
+            "real_count": 36
+          },
+          {
+            "word": "انجلس",
+            "log_odds": -3.643,
+            "fake_count": 0,
+            "real_count": 35
+          },
+          {
+            "word": "برائٹن",
+            "log_odds": -3.4607,
+            "fake_count": 0,
+            "real_count": 29
+          },
+          {
+            "word": "157",
+            "log_odds": -3.4268,
+            "fake_count": 0,
+            "real_count": 28
+          },
+          {
+            "word": "2019",
+            "log_odds": -3.4094,
+            "fake_count": 5,
+            "real_count": 170
+          },
+          {
+            "word": "لیسسٹر",
+            "log_odds": -3.3917,
+            "fake_count": 0,
+            "real_count": 27
+          },
+          {
+            "word": "ڈومنیک",
+            "log_odds": -3.3917,
+            "fake_count": 0,
+            "real_count": 27
+          },
+          {
+            "word": "جوفرا",
+            "log_odds": -3.3917,
+            "fake_count": 0,
+            "real_count": 27
+          },
+          {
+            "word": "برنلے",
+            "log_odds": -3.3917,
+            "fake_count": 0,
+            "real_count": 27
+          },
+          {
+            "word": "اسٹیفنوس",
+            "log_odds": -3.3553,
+            "fake_count": 0,
+            "real_count": 26
+          },
+          {
+            "word": "ووسٹر",
+            "log_odds": -3.3553,
+            "fake_count": 0,
+            "real_count": 26
+          },
+          {
+            "word": "ورسٹی",
+            "log_odds": -3.3553,
+            "fake_count": 0,
+            "real_count": 26
+          },
+          {
+            "word": "رف",
+            "log_odds": -3.3176,
+            "fake_count": 2,
+            "real_count": 77
+          },
+          {
+            "word": "یونی",
+            "log_odds": -3.3176,
+            "fake_count": 0,
+            "real_count": 25
+          },
+          {
+            "word": "کیلاش",
+            "log_odds": -3.3176,
+            "fake_count": 0,
+            "real_count": 25
+          }
+        ]
+      },
+      "source_domain": {
+        "has_source_or_domain_field": true,
+        "fields": [
+          "Category",
+          "Date"
+        ],
+        "Category_distribution": {
+          "Sports": 6737,
+          "Entertainment": 3811,
+          "Business & Economics": 2834,
+          "Science & Technology": 6
+        },
+        "Category_by_label": {
+          "Business & Economics": {
+            "fake": 1404,
+            "real": 1430
+          },
+          "Entertainment": {
+            "fake": 1950,
+            "real": 1861
+          },
+          "Science & Technology": {
+            "fake": 3,
+            "real": 3
+          },
+          "Sports": {
+            "fake": 3354,
+            "real": 3383
+          }
+        },
+        "Category_label_skew_over_90pct": {},
+        "date_field_present": true
+      },
+      "structural_artifacts": {
+        "boilerplate": {
+          "read_more_ur": {
+            "probe": "مزید پڑھیں",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "our_correspondent_ur": {
+            "probe": "نامہ نگار",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "report_ur": {
+            "probe": "رپورٹ",
+            "by_label": {
+              "fake": {
+                "count": 311,
+                "rate": 0.04634
+              },
+              "real": {
+                "count": 296,
+                "rate": 0.04433
+              }
+            }
+          },
+          "news_agency_ur": {
+            "probe": "خبر رساں ادارے",
+            "by_label": {
+              "fake": {
+                "count": 3,
+                "rate": 0.00045
+              },
+              "real": {
+                "count": 3,
+                "rate": 0.00045
+              }
+            }
+          },
+          "according_to_sources_ur": {
+            "probe": "ذرائع کے مطابق",
+            "by_label": {
+              "fake": {
+                "count": 180,
+                "rate": 0.02682
+              },
+              "real": {
+                "count": 179,
+                "rate": 0.02681
+              }
+            }
+          },
+          "file_photo_ur": {
+            "probe": "فائل فوٹو",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "read_more_en": {
+            "probe": "read more",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          },
+          "click_here_en": {
+            "probe": "click here",
+            "by_label": {
+              "fake": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "real": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          }
+        },
+        "punctuation_density_by_label": {
+          "fake": {
+            "mean_punctuation_density": 0.0,
+            "median_punctuation_density": 0.0
+          },
+          "real": {
+            "mean_punctuation_density": 0.0,
+            "median_punctuation_density": 0.0
+          }
+        },
+        "non_alphanumeric_inventory": {
+          "distinct_characters": 0,
+          "total_occurrences": 0,
+          "top_20": []
+        }
+      },
+      "language_mixing": {
+        "fake": {
+          "mean_latin_char_share": 0.0,
+          "mean_arabic_char_share": 0.78855,
+          "rows_with_any_latin": 0,
+          "rows_over_10pct_latin": 0
+        },
+        "real": {
+          "mean_latin_char_share": 0.0,
+          "mean_arabic_char_share": 0.77762,
+          "rows_with_any_latin": 0,
+          "rows_over_10pct_latin": 0
+        }
+      },
+      "leakage_checklist": {
+        "has_temporal_field": true,
+        "has_author_or_byline_field": false,
+        "note": "notri_fact: a Date field exists; a temporal holdout is feasible and is a strongly-recommended additional check (blueprint Part 9)."
+      }
+    }
+  },
+  "cross_dataset_comparison": {
+    "median_subwords_ax_to_grind": 40.0,
+    "median_subwords_notri_fact": 201.0,
+    "median_ratio_notri_over_ax": 5.025,
+    "surface_form_comparability": {
+      "ax_to_grind_distinct_non_alphanumeric": 47,
+      "notri_fact_distinct_non_alphanumeric": 0,
+      "warning": "Notri-Fact contains NO non-alphanumeric characters at all — not one Urdu full stop, comma or question mark — whereas Ax-to-Grind retains a full punctuation inventory. Notri-Fact was evidently punctuation-stripped before release. This is a THIRD cross-dataset confound alongside domain shift and length shift, and a consequential one: Ax-to-Grind's punctuation density itself differs by label (real ~0.0147 vs fake ~0.0102), so a model trained on it may learn a punctuation-linked cue that is SYSTEMATICALLY ABSENT at cross-dataset test time. A cross-dataset F1 collapse could therefore reflect this surface-form mismatch rather than a failure to learn genuine linguistic signal. Whether to neutralise it — e.g. by stripping punctuation from both corpora — is a research-methodology change requiring a DECISION_REGISTER.md entry before it is made (CLAUDE.md rule 3); it is NOT decided here."
+    },
+    "domain_shift_warning": "Ax-to-Grind carries no domain field, but its source paper describes 15 domains including politics, religion and health. Notri-Fact's Category field is dominated by Sports/Entertainment/Business & Economics. The two corpora therefore differ in BOTH topical domain and article length. A cross-dataset F1 drop (RQ2) is consequently NOT attributable to shortcut learning alone — domain shift and length shift are confounded with it. Any RQ2 claim must control for, or explicitly acknowledge, this."
+  },
+  "duplication": "see research/data/audit/duplication_report.json (dedup.py)"
+}

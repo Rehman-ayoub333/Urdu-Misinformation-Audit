@@ -21,5 +21,26 @@ pandas==3.0.5
 # engine to read it at all. Ax-to-Grind is CSV and needs none of this.
 openpyxl==3.1.5
 
+# --- Deduplication (research/src/data/dedup.py) ---
+# MinHash signatures are vectorised with numpy; the pure-Python form did not finish
+# in ten minutes. numpy arrives with pandas but is imported directly, so it is
+# pinned explicitly rather than relied on as a transitive dependency.
+numpy==2.5.2
+
+# --- Audit (research/src/data/audit.py) ---
+# blueprint Part 7 item 2 requires subword counts from the ACTUAL XLM-R tokenizer,
+# not a word-count proxy — it is what the model sees and what U2 is resolved from.
+# transformers is used here for its tokenizer only; torch is NOT required at this
+# milestone and is deliberately not installed until Milestone 4's training runs.
+transformers==5.15.0
+sentencepiece==0.2.2
+# Figures 1-3 (blueprint Part 31), written headless to research/results/figures/.
+matplotlib==3.11.1
+# Urdu rendering in figure 3. matplotlib has no Arabic shaping or bidi layout, so
+# without these the required thesis figure shows isolated, unjoined letters in
+# reversed order. Legible Urdu in a Urdu-language project is a stated need.
+arabic-reshaper==3.0.1
+python-bidi==0.6.11
+
 # --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
 pytest==9.1.1
