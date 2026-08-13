@@ -17,6 +17,9 @@ kaggle==2.2.4
 
 # --- Tabular inspection (row counts in the data-validation test) ---
 pandas==3.0.5
+# Notri-Fact ships as a single .xlsx workbook, not CSV, so pandas needs an Excel
+# engine to read it at all. Ax-to-Grind is CSV and needs none of this.
+openpyxl==3.1.5
 
 # --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
 pytest==9.1.1
