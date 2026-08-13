@@ -1,0 +1,22 @@
+# Research pipeline dependencies.
+# Every version pinned with `==`, never `>=` (REPRODUCIBILITY.md Section 1).
+# Target interpreter: Python 3.11, matching backend/pyproject.toml and Colab.
+#
+# Scope note: this file grows milestone by milestone, listing only what the code in
+# research/src/ actually imports (CLAUDE.md rule 16). At Milestone 1 that is
+# download.py plus its data-validation test. The ML stack (torch, transformers,
+# scikit-learn, captum) arrives with Milestones 3-5, when the training and
+# experiment scripts that import it are written.
+
+# --- Acquisition (research/src/data/download.py) ---
+requests==2.34.2
+# Kaggle is the documented acquisition path for Notri-Fact (DATASET_PLAN.md
+# Section 1). Requires an API token at run time; see download.py's
+# _download_notri_fact docstring for the credential contract.
+kaggle==2.2.4
+
+# --- Tabular inspection (row counts in the data-validation test) ---
+pandas==3.0.5
+
+# --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
+pytest==9.1.1
