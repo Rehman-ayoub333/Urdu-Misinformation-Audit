@@ -1,0 +1,53 @@
+# Backend CI — DEPLOYMENT_PLAN.md Section 5.
+# Runs tests + lint + type checks. This workflow deliberately does NOT deploy:
+# deployment is via each platform's own integration (DECISION_REGISTER.md E15).
+name: backend-ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Pinned to 3.11 exactly, matching backend/pyproject.toml's
+          # requires-python and REPRODUCIBILITY.md Section 1.
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Format check (ruff)
+        run: ruff format --check .
+
+      - name: Type check (mypy)
+        run: mypy
+
+      - name: Test (pytest)
+        run: pytest -q

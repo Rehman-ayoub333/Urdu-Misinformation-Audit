@@ -1,0 +1,55 @@
+# Frontend CI — DEPLOYMENT_PLAN.md Section 5.
+# npm ci, Vitest, Playwright, eslint, tsc --noEmit. No deploy step: Vercel deploys
+# from its own GitHub integration (DECISION_REGISTER.md E12/E15).
+name: frontend-ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Matches frontend/package.json's `engines.node` (REPRODUCIBILITY.md S1).
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Type check (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Test (vitest)
+        run: npm run test
+
+      - name: Install Playwright browser
+        # Chromium only — TESTING_STRATEGY.md Section 3 scopes E2E to Chromium.
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end (playwright)
+        # playwright.config.ts's `webServer` builds and starts the app itself.
+        run: npm run test:e2e
