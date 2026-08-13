@@ -117,7 +117,8 @@ urdu-misinfo-audit/
 │
 ├── research/                          # Everything in MASTER_PROJECT_BLUEPRINT.md Parts 6-15, operationalized
 │   ├── data/
-│   │   ├── raw/                       # gitignored, fetched via research/scripts/download_data.py
+│   │   ├── raw/                       # gitignored EXCEPT MANIFEST.sha256, which is committed
+│   │   │                              # (REPRODUCIBILITY.md S3 makes it the dataset version id)
 │   │   ├── clean/                     # gitignored
 │   │   ├── processed/                 # gitignored
 │   │   ├── splits/                    # committed (row-ID index files only)
@@ -159,6 +160,10 @@ urdu-misinfo-audit/
 │   │   ├── download_data.py
 │   │   ├── run_full_pipeline.sh
 │   │   └── export_model_card.py
+│   ├── tests/                         # data-validation tests (TESTING_STRATEGY.md S1's
+│   │   └── test_raw_data_integrity.py # "Data validation tests" — own pytest target
+│   ├── requirements.txt               # pinned per REPRODUCIBILITY.md Section 1
+│   ├── pyproject.toml                 # pytest config; pins Python 3.11
 │   └── results/
 │       ├── metrics/                   # committed (small, core evidence)
 │       ├── figures/                   # committed

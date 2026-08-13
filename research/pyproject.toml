@@ -1,0 +1,18 @@
+# Research-pipeline tooling configuration.
+# Like backend/pyproject.toml this is an application tree, not a distributable
+# package, so there is deliberately no [build-system] table.
+
+[project]
+name = "urdu-misinfo-audit-research"
+version = "0.0.0"
+description = "Dataset acquisition, audit, training and experiment pipeline"
+# Python 3.11 exactly, per REPRODUCIBILITY.md Section 1 — the same version the
+# backend and Colab target. Dependencies are pinned in research/requirements.txt.
+requires-python = "==3.11.*"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The repository root, so tests import `research.src.data.download` by the same
+# dotted path the pipeline scripts use (`python -m research.src.data.download`).
+# Relative to this file's directory.
+pythonpath = [".."]
