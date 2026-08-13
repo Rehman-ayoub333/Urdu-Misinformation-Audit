@@ -9,6 +9,10 @@
 # The directories themselves are kept so the tree in ARCHITECTURE.md S4 is real.
 research/data/raw/*
 !research/data/raw/.gitkeep
+# The checksum manifest is metadata, not data, and REPRODUCIBILITY.md Section 3 makes
+# it the dataset's version identifier — it must be committed (ROADMAP.md Milestone 1
+# lists it as a produced artifact).
+!research/data/raw/MANIFEST.sha256
 research/data/clean/*
 !research/data/clean/.gitkeep
 research/data/processed/*
