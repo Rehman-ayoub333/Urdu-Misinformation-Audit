@@ -24,7 +24,9 @@ HF Spaces free CPU tier has a cold-start delay after inactivity — acceptable f
 
 ## 5. CI/CD (GitHub Actions, `.github/workflows/`)
 
-`backend-ci.yml`: on PR to `main`, install `backend/requirements.txt`, run `pytest`, `ruff check`, `mypy`. `frontend-ci.yml`: on PR to `main`, `npm ci`, `npm run test` (Vitest), `npx playwright test`, `eslint`, `tsc --noEmit`. Neither workflow deploys anything — deployment is via each platform's native GitHub integration (Vercel) or the documented manual/semi-automated push (HF Spaces), per `DECISION_REGISTER.md` E15's reasoning against building custom CD machinery.
+Both workflows trigger on **pull requests to `main` and on pushes to `main`**. The `pull_request` trigger is what `GITHUB_PLAN.md` Section 5's branch protection requires; the `push` trigger was added at Milestone 0 because work lands directly on `main` during solo development, and a PR-only trigger would mean CI effectively never runs.
+
+`backend-ci.yml`: install `backend/requirements.txt` on Python 3.11, run `ruff check`, `ruff format --check`, `mypy`, `pytest`. `frontend-ci.yml`: on Node 24, `npm ci`, `eslint`, `tsc --noEmit`, `npm run test` (Vitest), then `npx playwright install --with-deps chromium` and `npx playwright test`. Neither workflow deploys anything — deployment is via each platform's native GitHub integration (Vercel) or the documented manual/semi-automated push (HF Spaces), per `DECISION_REGISTER.md` E15's reasoning against building custom CD machinery.
 
 ## 6. Environment variables (complete list, `.env.example` mirrors this with empty values)
 
