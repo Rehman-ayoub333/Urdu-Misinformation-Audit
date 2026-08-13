@@ -1,0 +1,37 @@
+{
+  "seed": 42,
+  "fractions": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "grouping_field": null,
+  "grouping_note": "Plain stratification. Blueprint Part 9's grouped-splitting option requires a source/publisher field, which Ax-to-Grind does not have (DECISION_REGISTER.md M2-2). Residual source-leakage risk is therefore untestable for this dataset and must be stated as a limitation.",
+  "deduplication": {
+    "applied_before_split": true,
+    "ax_to_grind_rows_removed": 932,
+    "notri_fact_rows_removed": 33,
+    "cross_dataset_overlap": 0
+  },
+  "counts": {
+    "ax_to_grind_total_after_dedup": 9151,
+    "ax_to_grind_train": 6405,
+    "ax_to_grind_val": 1372,
+    "ax_to_grind_test": 1374,
+    "notri_fact_holdout": 13355
+  },
+  "label_counts": {
+    "ax_to_grind_train": {
+      "real": 3203,
+      "fake": 3202
+    },
+    "ax_to_grind_val": {
+      "fake": 686,
+      "real": 686
+    },
+    "ax_to_grind_test": {
+      "fake": 687,
+      "real": 687
+    }
+  }
+}
