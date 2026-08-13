@@ -6,11 +6,15 @@ checks, label-value checks, null-text checks and row-count-against-documented-si
 checks belong to `validate.py` at Milestone 2 (`DATASET_PLAN.md` Section 2 step 2),
 and are not duplicated here.
 
-These tests are skipped rather than failed when the raw data is absent.
+Data-file tests are skipped rather than failed when the raw data is absent.
 `research/data/raw/` is gitignored (`GITHUB_PLAN.md` Section 3), so a fresh clone
 legitimately has no data until `download.py` has been run — a hard failure there
 would mean CI could never be green for anyone who has not downloaded the datasets.
-The manifest itself IS committed, so its absence is a real failure, not a skip.
+The manifest itself IS committed, so anything asserted about the manifest — that it
+exists, parses, and records every expected file — is a hard failure, never a skip.
+That split is what keeps the suite meaningful in CI while staying runnable locally:
+a missing manifest entry is always a real bug, whereas a missing 6 MB workbook is
+just an un-downloaded checkout.
 """
 
 from __future__ import annotations
@@ -25,15 +29,19 @@ from research.src.data.download import (
     sha256_of,
 )
 
-# Datasets that must appear in the manifest once acquired. Notri-Fact is absent
-# until Kaggle credentials exist (DECISION_REGISTER.md M1-3's sibling blocker,
-# reported at Milestone 1); tests covering it skip rather than fail so the suite
-# stays honest about what has actually been acquired.
+# Every file both datasets in DATASET_PLAN.md Section 1 are expected to contribute.
+# All are acquired as of Milestone 1, so the manifest must record all of them.
 EXPECTED_AX_TO_GRIND_FILES = {
     "ax_to_grind/Fake News.csv",
     "ax_to_grind/True News.csv",
     "ax_to_grind/Combined .csv",
 }
+
+EXPECTED_NOTRI_FACT_FILES = {
+    "notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+}
+
+EXPECTED_FILES = EXPECTED_AX_TO_GRIND_FILES | EXPECTED_NOTRI_FACT_FILES
 
 
 def test_manifest_exists() -> None:
@@ -70,7 +78,40 @@ def test_manifest_covers_ax_to_grind() -> None:
     assert not missing, f"Manifest is missing Ax-to-Grind entries: {sorted(missing)}"
 
 
-@pytest.mark.parametrize("relative", sorted(EXPECTED_AX_TO_GRIND_FILES))
+def test_manifest_covers_notri_fact() -> None:
+    """The cross-dataset test set is recorded.
+
+    Hard assertion, not a skip: Notri-Fact was acquired at Milestone 1, so a manifest
+    without it means the manifest was regenerated from an incomplete run — exactly the
+    silent-partial-acquisition case this test exists to catch. `DECISION_REGISTER.md`
+    R3/R7 make this dataset the held-out cross-dataset test set, so losing it would
+    invalidate the project's central experiment rather than merely degrade it.
+    """
+    recorded = set(read_manifest())
+    missing = EXPECTED_NOTRI_FACT_FILES - recorded
+    assert not missing, (
+        f"Manifest is missing Notri-Fact entries: {sorted(missing)}. "
+        "Re-run `python -m research.src.data.download --only notri_fact` with Kaggle "
+        "credentials present."
+    )
+
+
+def test_manifest_covers_both_datasets_exactly() -> None:
+    """The manifest records every expected file and nothing unexpected.
+
+    Catches the reverse of the two tests above: an entry for a file that is not part
+    of either documented dataset would mean something undocumented entered raw/ and
+    would flow into the pipeline with no provenance.
+    """
+    recorded = set(read_manifest())
+    assert recorded == EXPECTED_FILES, (
+        f"Manifest contents differ from the expected set.\n"
+        f"  unexpected: {sorted(recorded - EXPECTED_FILES)}\n"
+        f"  missing:    {sorted(EXPECTED_FILES - recorded)}"
+    )
+
+
+@pytest.mark.parametrize("relative", sorted(EXPECTED_FILES))
 def test_file_present_and_checksum_matches(relative: str) -> None:
     """Every manifest entry must exist on disk and hash to its recorded value.
 
