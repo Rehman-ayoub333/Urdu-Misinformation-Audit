@@ -42,5 +42,12 @@ matplotlib==3.11.1
 arabic-reshaper==3.0.1
 python-bidi==0.6.11
 
+# --- Classical baselines (Experiments A, B, H — Milestone 3) ---
+# TF-IDF + Logistic Regression / LinearSVC, and the length-only logistic model.
+scikit-learn==1.9.0
+# Experiment configs are YAML (REPRODUCIBILITY.md Section 4: no run is launched
+# from ad hoc CLI flags whose values aren't captured anywhere).
+PyYAML==6.0.3
+
 # --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
 pytest==9.1.1

@@ -1,0 +1,54 @@
+# Data configuration — shared by every experiment.
+#
+# REPRODUCIBILITY.md Section 4: an experiment is fully specified by its config
+# files, and the exact config used is copied alongside that run's output in
+# research/results/metrics/. Nothing here may be overridden by an undocumented
+# CLI flag.
+#
+# The dataset version identifier is research/data/raw/MANIFEST.sha256
+# (REPRODUCIBILITY.md Section 3), recorded into every metrics file at run time so
+# a result can always be traced back to the exact bytes it was computed from.
+
+version: 1
+
+datasets:
+  ax_to_grind:
+    role: primary_training_set          # DECISION_REGISTER.md R2
+    # Sole text source. Fake News.csv is corrupt upstream and True News.csv holds
+    # only the TRUE half — see DECISION_REGISTER.md M1-3.
+    source_file: research/data/raw/ax_to_grind/Combined .csv
+    splits:
+      train: research/data/splits/ax_to_grind_train.txt
+      val: research/data/splits/ax_to_grind_val.txt
+      test: research/data/splits/ax_to_grind_test.txt
+
+  notri_fact:
+    role: cross_dataset_test_set        # DECISION_REGISTER.md R3
+    source_file: research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx
+    splits:
+      holdout: research/data/splits/notri_fact_holdout.txt
+    # R7: never trained on, never split, never concatenated with Ax-to-Grind.
+    # Not referenced at all by Milestone 3's in-domain experiments (A, B, H).
+    train_on: false
+
+labels:
+  # Canonical values produced by validate.py's normalisation.
+  positive: fake        # the class treated as positive for binary PR/ROC curves
+  negative: real
+  order: [fake, real]   # fixed order for confusion matrices, so rows/cols never drift
+
+preprocessing:
+  # Tier 2 only (MASTER_PROJECT_BLUEPRINT.md Part 8), via research/src/data/clean.py.
+  tier: 2
+  # Length capping is deliberately NOT applied here. Part 8 is explicit that the
+  # undisturbed, Tier-2-only text must be used for RQ1-RQ3, because capping by
+  # default would pre-empt the very confound experiment H measures.
+  cap_length: false
+  # Off by default so numeric density stays measurable as a candidate shortcut.
+  normalise_numbers: false
+
+deduplication:
+  # Applied before splitting at Milestone 2; the split index files already exclude
+  # the removed rows. Recorded here so a reader of a metrics file can see it was done.
+  applied_before_split: true
+  report: research/data/audit/duplication_report.json

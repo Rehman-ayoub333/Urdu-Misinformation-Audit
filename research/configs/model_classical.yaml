@@ -1,0 +1,100 @@
+# Classical baseline configuration — Experiments A, B (in-domain) and H (length-only).
+#
+# EXPERIMENT_PLAN.md Section 1 fixes the model set: TF-IDF+Logistic Regression,
+# TF-IDF+SVM, mBERT, XLM-R. No model is added without a DECISION_REGISTER.md row.
+#
+# EXPERIMENT_PLAN.md Section 5: classical baselines run ONCE rather than over the
+# {42, 123, 2026} seed triple used for transformers — they are deterministic given
+# a fixed random_state. REPRODUCIBILITY.md Section 2 still requires the seed be
+# recorded explicitly rather than left to a library default, which is what
+# `random_state` below does.
+
+version: 1
+
+random_state: 42
+
+features:
+  tfidf:
+    # A word+character union. Character n-grams are included because
+    # MASTER_PROJECT_BLUEPRINT.md Part 7 item 3 notes they are informative for
+    # Urdu, which is morphologically rich and inconsistently spaced — a
+    # word-only vectoriser would give the baseline an unfairly weak showing, and
+    # Part 32's ML section is explicit that classical models have beaten
+    # transformers on this task family (FIRE2021). A weak baseline would make the
+    # transformer comparison flattering rather than informative.
+    word:
+      enabled: true
+      ngram_range: [1, 2]
+      min_df: 2
+      max_df: 0.9
+      max_features: 200000
+      sublinear_tf: true
+    char:
+      enabled: true
+      # char_wb keeps n-grams inside word boundaries, which is the sensible
+      # variant for a script where cross-word n-grams are mostly noise.
+      analyzer: char_wb
+      ngram_range: [3, 5]
+      min_df: 3
+      max_df: 0.9
+      max_features: 300000
+      sublinear_tf: true
+    lowercase: false   # Urdu is unicase; lowercasing only affects code-switched Latin
+    strip_accents: null  # diacritics are already handled in Tier-2 cleaning
+
+experiments:
+  A:
+    name: tfidf_logreg
+    description: "Experiment A — TF-IDF + Logistic Regression, in-domain on Ax-to-Grind"
+    classifier: logistic_regression
+    params:
+      C: 1.0
+      max_iter: 2000
+      class_weight: balanced   # near-balanced already, but explicit beats implicit
+      solver: liblinear
+
+  B:
+    name: tfidf_svm
+    description: "Experiment B — TF-IDF + linear SVM, in-domain on Ax-to-Grind"
+    classifier: linear_svc
+    params:
+      C: 1.0
+      max_iter: 5000
+      class_weight: balanced
+      # LinearSVC has no predict_proba; decision_function scores are used for
+      # ROC/PR instead. Deliberately not wrapped in CalibratedClassifierCV — that
+      # would change the model being reported from "linear SVM" to "calibrated
+      # linear SVM" for no benefit to the comparison this baseline exists for.
+
+  H:
+    name: length_only
+    description: >
+      Experiment H — length-only baseline. Logistic regression over LENGTH-DERIVED
+      FEATURES ONLY, with no access to article content whatsoever. This is the
+      direct operationalisation of RQ3 (MASTER_PROJECT_BLUEPRINT.md Part 32:
+      "the fastest way to isolate the length shortcut — a linear model on word
+      count alone"). Its macro-F1 is the floor that any content-based model must
+      clear to have demonstrated it learned something beyond article length.
+    classifier: logistic_regression
+    features:
+      # Milestone 2's audit measured Ax-to-Grind fake p95 = 724 subwords against
+      # real p95 = 77, so these features alone are expected to be highly
+      # predictive on this dataset. That expectation is NOT baked in anywhere —
+      # it is what the experiment measures.
+      - n_chars
+      - n_words
+    # Standardised because logistic regression on raw counts spanning ~10 to
+    # ~5,000 converges poorly and the coefficients become uninterpretable.
+    standardise: true
+    params:
+      C: 1.0
+      max_iter: 2000
+      class_weight: balanced
+      solver: liblinear
+
+evaluation:
+  # EXPERIMENT_PLAN.md Section 4's output contract.
+  primary_metric: macro_f1          # DECISION_REGISTER.md R5
+  compute_roc_auc: true             # in-domain runs only
+  compute_pr_auc: true
+  splits_evaluated: [val, test]
