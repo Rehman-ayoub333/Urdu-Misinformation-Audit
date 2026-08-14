@@ -11,7 +11,8 @@ TF-IDF+Logistic Regression, TF-IDF+SVM, mBERT, XLM-RoBERTa-base. No other model 
 | Order | Experiment IDs | Script | Blocks on |
 |---|---|---|---|
 | 1 | A, B (classical in-domain) | `run_in_domain.py --models classical` | `DATASET_PLAN.md` split gate |
-| 2 | H (length-only baseline) | `run_shortcut_analysis.py --mode length-only` | Step 1 |
+| 2 | H (length-only baseline, linear) | `run_shortcut_analysis.py --mode length-only` | Step 1 |
+| 2b | H2 (length-only baseline, nonlinear — added `DECISION_REGISTER.md` M3-1, since H's linear model structurally cannot express the U-shaped length↔label relationship found in Milestone 2/3) | `run_shortcut_analysis.py --mode length-only --classifier decision_tree` | Step 1. Same length-only feature registry as H (no content access); reports the floor (H)/ceiling (H2) pair together |
 | 3 | C, D (mBERT, XLM-R in-domain, 3 seeds each) | `run_in_domain.py --models transformer` | Step 1 (pipeline validated on cheap models first) |
 | 4 | F, G (cross-dataset zero-shot, all 4 models, both directions) | `run_cross_dataset.py` | **Dedup gate in `DATASET_PLAN.md` step 4 must show zero cross-dataset near-duplicates before this runs** |
 | 4b | Q (punctuation-surface-form ablation — added `DECISION_REGISTER.md` M2-3, resolving the punctuation-stripping confound discovered in Milestone 2's audit) | `run_shortcut_analysis.py --mode punctuation-ablation` | Step 4. XLM-R only, Ax-to-Grind→Notri-Fact direction only, 3 seeds — retrain on punctuation-stripped Ax-to-Grind, re-evaluate zero-shot on Notri-Fact, report the macro-F1 delta against F/G's same-direction XLM-R result |
@@ -24,7 +25,7 @@ TF-IDF+Logistic Regression, TF-IDF+SVM, mBERT, XLM-RoBERTa-base. No other model 
 | 11 | L, M (mitigation: length-stratified retrain + re-test cross-dataset) | `run_mitigation.py` | Steps 4–5 |
 | 12 | P (domain-adaptive pretraining) | STRETCH — only after 1–11 are complete with time to spare | — |
 
-Steps 1–7, plus Q (step 4b), are the REQUIRED set (`MASTER_PROJECT_BLUEPRINT.md` Part 12, extended by `DECISION_REGISTER.md` M2-3) and must all be complete, with real results committed to `research/results/`, before frontend/backend implementation proceeds past a placeholder-checkpoint stage (`ROADMAP.md` gates this explicitly). Q is included in the REQUIRED set despite being added after the original plan because it's necessary to correctly interpret step 4's headline result, not an optional extension.
+Steps 1–7, plus Q (step 4b) and H2 (step 2b), are the REQUIRED set (`MASTER_PROJECT_BLUEPRINT.md` Part 12, extended by `DECISION_REGISTER.md` M2-3 and M3-1) and must all be complete, with real results committed to `research/results/`, before frontend/backend implementation proceeds past a placeholder-checkpoint stage (`ROADMAP.md` gates this explicitly). Q and H2 are both included in the REQUIRED set despite being added after the original plan: Q is necessary to correctly interpret step 4's headline result, and H2 is necessary to correctly interpret step 2's — neither is an optional extension.
 
 ## 3. Config-driven execution
 
