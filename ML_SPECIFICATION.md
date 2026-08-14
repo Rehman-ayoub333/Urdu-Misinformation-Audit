@@ -55,6 +55,25 @@ Share of articles that fit **without truncation**:
 
 Keep `app/config.py`'s `MAX_TEXT_LENGTH` default in sync with this number when the backend is implemented (Milestone 6).
 
+### 3.1 Training-time sequence length (`DECISION_REGISTER.md` M4-1)
+
+`MASTER_PROJECT_BLUEPRINT.md` Part 8 specifies the **full, uncapped** Tier-2-cleaned text for the RQ1–RQ3 training and evaluation runs. That cannot be taken literally: mBERT and XLM-R-base both have 512 learned position embeddings and cannot accept a longer sequence on any hardware. **"Uncapped" therefore means "truncate at the model's architectural maximum (512), not at a smaller value chosen for serving latency"** — which is what `research/configs/model_{mbert,xlmr}.yaml` do. Training and serving happen to share the number 512, but for different reasons: serving because M2-1 weighed coverage against CPU latency, training because the architecture permits nothing larger.
+
+Measured truncation at 512 over Tier-2-cleaned text:
+
+| Dataset | Rows truncated | Share | By label | Max observed |
+|---|---|---|---|---|
+| Ax-to-Grind | 478 / 10,083 | 4.74% | **fake 478 (9.46% of class), real 0 (0.00%)** | 1,447 |
+| Notri-Fact | 113 / 13,388 | 0.84% | real 91 (1.36%), fake 22 (0.33%) | 2,217 |
+
+**This is not neutral preprocessing, and the thesis must say so.** In Ax-to-Grind every truncated article is fake, so the 512 cap:
+
+1. limits RQ3's claims to **signal within a 512-token window** — "the model learned X from length" is defensible only up to that window;
+2. **partially attenuates the confound it is measuring**, by clipping exactly the extreme-length fake tail that makes length so predictive, while turning "this article hit the cap" into a near-perfect fake indicator — the shortcut is transformed rather than removed;
+3. makes experiments C/D **not directly length-comparable to H**, which used uncapped `n_chars`/`n_words`.
+
+Every metrics file records its own run's truncation under `run_metadata.truncation`. No mitigation is attempted: a longer context would need a different architecture (e.g. Longformer), which `DECISION_REGISTER.md` R4 does not permit without a new decision.
+
 ## 4. Non-Urdu / script detection
 
 A lightweight heuristic (not a full language-ID model — unjustified complexity for a soft warning) checks the proportion of Arabic-script Unicode codepoints in the submitted text. Below a threshold (e.g., <30% Arabic-script characters), the response sets `"script_warning": true` but **still returns a prediction** — the system degrades to "here's a result, but treat it skeptically," not a hard refusal, consistent with the responsible-AI framing (disclose uncertainty, don't pretend a false boundary).
