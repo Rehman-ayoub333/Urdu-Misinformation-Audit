@@ -115,6 +115,43 @@ def read_split(name: str, source: Path | None = None) -> list[str]:
     return [line for line in target.read_text(encoding="utf-8").splitlines() if line]
 
 
+_LOADERS = {"ax_to_grind": load_ax_to_grind, "notri_fact": load_notri_fact}
+
+
+def load_split_frame(dataset: str, split: str) -> pd.DataFrame:
+    """Resolve a committed split index back to rows of Tier-2-cleaned text.
+
+    The single path from a split index file to model input, used by every
+    experiment runner. Centralised so that "which text does experiment X train
+    on?" has exactly one answer: the rows named in the committed index, cleaned by
+    `clean.py` — the same function the backend calls at serving time
+    (`ML_SPECIFICATION.md` Section 9).
+
+    Returns a frame with `row_id`, `text` (cleaned) and `label`, ordered to match
+    the index file so a run is reproducible independent of loader row order.
+    """
+    if dataset not in _LOADERS:
+        raise ValueError(f"unknown dataset {dataset!r}; expected one of {sorted(_LOADERS)}")
+
+    index_name = f"{dataset}_{split}"
+    wanted = read_split(index_name)
+
+    frame, _ = _LOADERS[dataset]()
+    by_id = frame.set_index("row_id")
+
+    missing = [row_id for row_id in wanted if row_id not in by_id.index]
+    if missing:
+        raise ValueError(
+            f"{index_name}: {len(missing)} row_id(s) in the split index are absent from "
+            f"the loaded dataset, e.g. {missing[:5]}. The split files and the raw data "
+            "have diverged — regenerate with research/src/data/split.py."
+        )
+
+    selected = by_id.loc[wanted].reset_index()
+    selected["text"] = selected["text"].map(clean_text)
+    return selected[["row_id", "text", "label"]]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args(argv)
