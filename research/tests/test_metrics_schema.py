@@ -168,13 +168,91 @@ def _committed_metrics_files() -> list:
 
 
 def test_metrics_directory_contains_results() -> None:
-    """ROADMAP.md Milestone 3: A_*, B_*, H_* must exist with real numbers."""
+    """ROADMAP.md Milestone 3: A_*, B_*, H_* must exist with real numbers.
+
+    H2_* joins them via EXPERIMENT_PLAN.md step 2b (DECISION_REGISTER.md M3-1),
+    which places H2 in the REQUIRED set rather than treating it as optional.
+    """
     files = _committed_metrics_files()
     if not files:
         pytest.skip("no metrics generated yet — run the experiment scripts")
-    names = {path.name[0] for path in files}
-    for experiment in ("A", "B", "H"):
+    names = {path.name.split("_")[0] for path in files}
+    for experiment in ("A", "B", "H", "H2"):
         assert experiment in names, f"no metrics file for experiment {experiment}"
+
+
+# --- The H/H2 floor-ceiling pair (DECISION_REGISTER.md M3-1) -------------------
+
+
+def _h2_files() -> list:
+    return sorted(METRICS_DIR.glob("H2_*.json")) if METRICS_DIR.exists() else []
+
+
+@pytest.mark.parametrize("path", _h2_files(), ids=lambda p: p.name)
+def test_h2_records_the_floor_ceiling_pair(path) -> None:
+    """H2's number is not interpretable alone, so its file must carry H's too."""
+    record = json.loads(path.read_text(encoding="utf-8"))
+    pair = record["run_metadata"]["length_shortcut_floor_ceiling"]
+    for field in (
+        "floor_H_linear_macro_f1",
+        "ceiling_H2_nonlinear_macro_f1",
+        "delta_H2_minus_H",
+        "majority_class_macro_f1",
+    ):
+        assert field in pair, f"{path.name}: floor/ceiling pair missing {field}"
+
+
+@pytest.mark.parametrize("path", _h2_files(), ids=lambda p: p.name)
+def test_h2_floor_ceiling_pair_matches_the_committed_files(path) -> None:
+    """The pair is copied from H's file at write time, so it can go stale if H is
+    re-run afterwards. This is what catches that — two numbers in the repo
+    disagreeing about the same experiment is exactly the failure `CLAUDE.md` rule
+    2 exists to prevent."""
+    record = json.loads(path.read_text(encoding="utf-8"))
+    pair = record["run_metadata"]["length_shortcut_floor_ceiling"]
+
+    assert pair["ceiling_H2_nonlinear_macro_f1"] == pytest.approx(
+        record["metrics"]["macro_f1"], abs=1e-4
+    )
+
+    h_path = METRICS_DIR / pair["source_files"]["H"]
+    if not h_path.exists():
+        pytest.skip(f"{h_path.name} not committed — nothing to cross-check")
+    h_macro_f1 = json.loads(h_path.read_text(encoding="utf-8"))["metrics"]["macro_f1"]
+    assert pair["floor_H_linear_macro_f1"] == pytest.approx(h_macro_f1, abs=1e-4), (
+        f"{path.name} records H={pair['floor_H_linear_macro_f1']} but "
+        f"{h_path.name} says {h_macro_f1:.4f} — re-run H2 to refresh the pair"
+    )
+    assert pair["delta_H2_minus_H"] == pytest.approx(
+        record["metrics"]["macro_f1"] - h_macro_f1, abs=1e-4
+    )
+
+
+@pytest.mark.parametrize("path", _h2_files(), ids=lambda p: p.name)
+def test_h2_reports_the_configured_depth_not_a_sweep_probe(path) -> None:
+    """Guards against the headline number silently becoming a diagnostic probe's.
+
+    The depth sweep refits at other depths; if that ever leaked into the reported
+    result, the committed macro-F1 would no longer match the config the file
+    claims produced it.
+    """
+    record = json.loads(path.read_text(encoding="utf-8"))
+    configured = record["config"]["model"]["experiment"]["params"]["max_depth"]
+    sweep = record["run_metadata"]["depth_sweep_diagnostic"]
+
+    assert sweep["reported_depth"] == configured
+    assert record["run_metadata"]["tree_structure"]["max_depth_configured"] == configured
+    assert sweep["macro_f1_by_depth"][f"max_depth_{configured}"] == pytest.approx(
+        record["metrics"]["macro_f1"], abs=1e-4
+    )
+
+
+@pytest.mark.parametrize("path", _h2_files(), ids=lambda p: p.name)
+def test_h2_never_touched_article_content(path) -> None:
+    """The one claim H2 cannot afford to be wrong about."""
+    metadata = json.loads(path.read_text(encoding="utf-8"))["run_metadata"]
+    assert metadata["uses_text_content"] is False
+    assert metadata["classifier"] == "decision_tree"
 
 
 @pytest.mark.parametrize(

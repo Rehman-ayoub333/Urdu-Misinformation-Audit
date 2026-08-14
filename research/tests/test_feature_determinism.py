@@ -15,8 +15,12 @@ import yaml
 from research.src.experiments.run_in_domain import CONFIG_DIR
 from research.src.models.classical import build_pipeline, build_vectorizer
 from research.src.models.length_baseline import (
+    SUPPORTED_CLASSIFIERS,
     SUPPORTED_FEATURES,
+    build_length_pipeline,
+    depth_sweep_diagnostic,
     extract_length_features,
+    fit_predict_length,
     length_relationship_diagnostic,
 )
 
@@ -84,6 +88,108 @@ def test_length_diagnostic_is_deterministic() -> None:
     first = length_relationship_diagnostic(TEXTS * 10, LABELS * 10, n_bins=2)
     second = length_relationship_diagnostic(TEXTS * 10, LABELS * 10, n_bins=2)
     assert first == second
+
+
+# --- Experiment H2 — the nonlinear length-only baseline (M3-1) -----------------
+
+
+def test_h2_uses_exactly_the_same_feature_registry_as_h(model_config: dict) -> None:
+    """The load-bearing guard on the whole floor/ceiling comparison.
+
+    H2 exists to isolate ONE difference from H — linear versus nonlinear. If the
+    two feature lists ever drift apart, the gap between their scores stops being
+    attributable to model shape and the pair reported for RQ3 becomes meaningless.
+    """
+    assert (
+        model_config["experiments"]["H2"]["features"]
+        == model_config["experiments"]["H"]["features"]
+    )
+
+
+def test_h2_features_are_all_length_only(model_config: dict) -> None:
+    """Same content-blindness guarantee as H — asserted, not assumed."""
+    for name in model_config["experiments"]["H2"]["features"]:
+        assert name in SUPPORTED_FEATURES
+
+
+def test_length_tree_predictions_are_deterministic(model_config: dict) -> None:
+    """What makes H2 safe to run once, like H (EXPERIMENT_PLAN.md Section 5).
+
+    Decision trees choose among equally-good splits using the RNG, so this is a
+    real risk here rather than a formality: an unseeded tree can produce different
+    thresholds — and a different macro-F1 — on identical data.
+    """
+    texts, labels = TEXTS * 8, LABELS * 8
+    runs = []
+    for _ in range(3):
+        pipeline = build_length_pipeline(model_config, "H2")
+        predictions, _, attribution = fit_predict_length(
+            pipeline, texts, labels, texts, ["n_chars", "n_words"], positive_label="fake"
+        )
+        runs.append((predictions, attribution))
+    assert runs[0] == runs[1] == runs[2]
+
+
+def test_length_tree_uses_the_configured_seed_and_depth_cap(model_config: dict) -> None:
+    """Seed from config, never a library default (REPRODUCIBILITY.md Section 2),
+    and the depth cap is what keeps H2 a length-only *baseline* rather than an
+    unconstrained model."""
+    tree = build_length_pipeline(model_config, "H2").named_steps["classifier"]
+    assert tree.random_state == model_config["random_state"]
+    assert tree.max_depth == model_config["experiments"]["H2"]["params"]["max_depth"]
+    assert tree.max_depth is not None and tree.max_depth <= 5
+
+
+def test_length_tree_pipeline_does_not_standardise(model_config: dict) -> None:
+    """H2's learned thresholds are reported in raw word/character counts.
+
+    Scaling cannot change a tree's score, but it would turn "real articles sit
+    between N and M words" into a statement about standard deviations, which is
+    not readable as a finding.
+    """
+    assert "scaler" not in build_length_pipeline(model_config, "H2").named_steps
+    assert "scaler" in build_length_pipeline(model_config, "H").named_steps
+
+
+def test_length_pipeline_rejects_an_unsupported_classifier(model_config: dict) -> None:
+    """H/H2 are a matched pair; a third variant appearing by accident would blur
+    the floor/ceiling reading."""
+    config = {
+        **model_config,
+        "experiments": {**model_config["experiments"], "H2": {"classifier": "random_forest"}},
+    }
+    with pytest.raises(ValueError, match="unsupported length-only classifier"):
+        build_length_pipeline(config, "H2")
+
+
+def test_supported_classifiers_map_to_their_experiment_ids() -> None:
+    assert SUPPORTED_CLASSIFIERS == {
+        "logistic_regression": "H",
+        "decision_tree": "H2",
+    }
+
+
+def test_depth_sweep_diagnostic_is_deterministic(model_config: dict) -> None:
+    texts, labels = TEXTS * 8, LABELS * 8
+    first = depth_sweep_diagnostic(
+        model_config, texts, labels, texts, labels, ["n_chars", "n_words"], depths=[2, 5]
+    )
+    second = depth_sweep_diagnostic(
+        model_config, texts, labels, texts, labels, ["n_chars", "n_words"], depths=[2, 5]
+    )
+    assert first == second
+    assert set(first["macro_f1_by_depth"]) == {"max_depth_2", "max_depth_5"}
+
+
+def test_depth_sweep_does_not_mutate_the_config(model_config: dict) -> None:
+    """The sweep overrides max_depth per probe. If it did so in place, H2's
+    reported result would silently become whichever depth was probed last."""
+    reported = model_config["experiments"]["H2"]["params"]["max_depth"]
+    texts, labels = TEXTS * 8, LABELS * 8
+    depth_sweep_diagnostic(
+        model_config, texts, labels, texts, labels, ["n_chars", "n_words"], depths=[5]
+    )
+    assert model_config["experiments"]["H2"]["params"]["max_depth"] == reported
 
 
 # --- TF-IDF features -----------------------------------------------------------
