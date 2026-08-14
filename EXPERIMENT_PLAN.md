@@ -14,6 +14,7 @@ TF-IDF+Logistic Regression, TF-IDF+SVM, mBERT, XLM-RoBERTa-base. No other model 
 | 2 | H (length-only baseline) | `run_shortcut_analysis.py --mode length-only` | Step 1 |
 | 3 | C, D (mBERT, XLM-R in-domain, 3 seeds each) | `run_in_domain.py --models transformer` | Step 1 (pipeline validated on cheap models first) |
 | 4 | F, G (cross-dataset zero-shot, all 4 models, both directions) | `run_cross_dataset.py` | **Dedup gate in `DATASET_PLAN.md` step 4 must show zero cross-dataset near-duplicates before this runs** |
+| 4b | Q (punctuation-surface-form ablation — added `DECISION_REGISTER.md` M2-3, resolving the punctuation-stripping confound discovered in Milestone 2's audit) | `run_shortcut_analysis.py --mode punctuation-ablation` | Step 4. XLM-R only, Ax-to-Grind→Notri-Fact direction only, 3 seeds — retrain on punctuation-stripped Ax-to-Grind, re-evaluate zero-shot on Notri-Fact, report the macro-F1 delta against F/G's same-direction XLM-R result |
 | 5 | I (length-ablation, replicate the 50-word cap design) | `run_shortcut_analysis.py --mode length-ablation` | Step 3 |
 | 6 | N (Integrated Gradients on a sampled subset) | `research/src/explainability/integrated_gradients.py` | Step 3 (needs a trained checkpoint) |
 | 7 | O (error analysis categorization) | `research/src/evaluation/error_analysis.py` | Steps 3–4 |
@@ -23,7 +24,7 @@ TF-IDF+Logistic Regression, TF-IDF+SVM, mBERT, XLM-RoBERTa-base. No other model 
 | 11 | L, M (mitigation: length-stratified retrain + re-test cross-dataset) | `run_mitigation.py` | Steps 4–5 |
 | 12 | P (domain-adaptive pretraining) | STRETCH — only after 1–11 are complete with time to spare | — |
 
-Steps 1–7 are the REQUIRED set (`MASTER_PROJECT_BLUEPRINT.md` Part 12) and must all be complete, with real results committed to `research/results/`, before frontend/backend implementation proceeds past a placeholder-checkpoint stage (`ROADMAP.md` gates this explicitly).
+Steps 1–7, plus Q (step 4b), are the REQUIRED set (`MASTER_PROJECT_BLUEPRINT.md` Part 12, extended by `DECISION_REGISTER.md` M2-3) and must all be complete, with real results committed to `research/results/`, before frontend/backend implementation proceeds past a placeholder-checkpoint stage (`ROADMAP.md` gates this explicitly). Q is included in the REQUIRED set despite being added after the original plan because it's necessary to correctly interpret step 4's headline result, not an optional extension.
 
 ## 3. Config-driven execution
 
@@ -35,7 +36,7 @@ Every experiment writes: a JSON metrics file (`research/results/metrics/<experim
 
 ## 5. Metric
 
-Primary: Macro-F1 (`DECISION_REGISTER.md` R5). Full set per experiment: accuracy, macro-F1, weighted-F1, per-class precision/recall, confusion matrix; ROC-AUC/PR-AUC for in-domain runs only; calibration/ECE for the primary deployed checkpoint. 3 random seeds (`{42, 123, 2026}`) for every transformer run (C, D, and their F/G/L/M counterparts); classical baselines (A, B, H) run once (deterministic enough — `MASTER_PROJECT_BLUEPRINT.md` Part 13).
+Primary: Macro-F1 (`DECISION_REGISTER.md` R5). Full set per experiment: accuracy, macro-F1, weighted-F1, per-class precision/recall, confusion matrix; ROC-AUC/PR-AUC for in-domain runs only; calibration/ECE for the primary deployed checkpoint. 3 random seeds (`{42, 123, 2026}`) for every transformer run (C, D, and their F/G/L/M/Q counterparts); classical baselines (A, B, H) run once (deterministic enough — `MASTER_PROJECT_BLUEPRINT.md` Part 13).
 
 ## 6. Explainability sample
 
