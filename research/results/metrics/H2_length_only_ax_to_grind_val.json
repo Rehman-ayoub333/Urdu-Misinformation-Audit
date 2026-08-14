@@ -1,0 +1,266 @@
+{
+  "experiment_id": "H2",
+  "model": "length_only",
+  "dataset": "ax_to_grind",
+  "split": "val",
+  "seed": 42,
+  "n_examples": 1372,
+  "metrics": {
+    "accuracy": 0.7434402332361516,
+    "macro_f1": 0.7430421800211549,
+    "weighted_f1": 0.743042180021155,
+    "roc_auc": 0.782959268672067,
+    "pr_auc": 0.7496448402488192
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        537,
+        149
+      ],
+      [
+        203,
+        483
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.7256756756756757,
+      "recall": 0.782798833819242,
+      "f1": 0.7531556802244039,
+      "support": 686
+    },
+    "real": {
+      "precision": 0.7642405063291139,
+      "recall": 0.7040816326530612,
+      "f1": 0.7329286798179059,
+      "support": 686
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 740,
+      "real": 632
+    },
+    "dominant_class_share": 0.5394,
+    "is_collapsed": false
+  },
+  "majority_class_baseline": {
+    "majority_class": "fake",
+    "accuracy": 0.5,
+    "macro_f1": 0.3333333333333333
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-14T16:58:48.677225+00:00",
+    "git_commit": "61782f17a54bafd56565834ded17dbc11a375d70",
+    "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
+    "python_version": "3.13.3",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "n_train": 6405,
+    "train_split": "ax_to_grind_train",
+    "features_used": [
+      "n_chars",
+      "n_words"
+    ],
+    "uses_text_content": false,
+    "classifier": "decision_tree",
+    "length_relationship_diagnostic": {
+      "feature": "n_words",
+      "roc_auc_of_raw_feature": 0.464,
+      "bins": [
+        {
+          "bin": 1,
+          "range": [
+            4.0,
+            13.0
+          ],
+          "n": 125,
+          "fake_rate": 0.776
+        },
+        {
+          "bin": 2,
+          "range": [
+            13.0,
+            16.0
+          ],
+          "n": 125,
+          "fake_rate": 0.776
+        },
+        {
+          "bin": 3,
+          "range": [
+            16.0,
+            19.0
+          ],
+          "n": 141,
+          "fake_rate": 0.5674
+        },
+        {
+          "bin": 4,
+          "range": [
+            19.0,
+            23.0
+          ],
+          "n": 148,
+          "fake_rate": 0.4459
+        },
+        {
+          "bin": 5,
+          "range": [
+            23.0,
+            29.0
+          ],
+          "n": 146,
+          "fake_rate": 0.3699
+        },
+        {
+          "bin": 6,
+          "range": [
+            29.0,
+            37.0
+          ],
+          "n": 135,
+          "fake_rate": 0.1852
+        },
+        {
+          "bin": 7,
+          "range": [
+            37.0,
+            44.0
+          ],
+          "n": 120,
+          "fake_rate": 0.1917
+        },
+        {
+          "bin": 8,
+          "range": [
+            44.0,
+            54.0
+          ],
+          "n": 155,
+          "fake_rate": 0.1677
+        },
+        {
+          "bin": 9,
+          "range": [
+            54.0,
+            157.10000000000082
+          ],
+          "n": 139,
+          "fake_rate": 0.5755
+        },
+        {
+          "bin": 10,
+          "range": [
+            157.10000000000082,
+            1128.0
+          ],
+          "n": 138,
+          "fake_rate": 1.0
+        }
+      ],
+      "is_monotonic": false,
+      "interpretation": "Non-monotonic: the positive rate is high at BOTH extremes and low in the middle. Rank-based AUC near 0.5 therefore understates the relationship, and a LINEAR model cannot express it — H's macro-F1 is a floor on the available length shortcut, not a measurement of it."
+    },
+    "feature_importances": {
+      "n_chars": 0.43837863633579105,
+      "n_words": 0.561621363664209
+    },
+    "tree_structure": {
+      "max_depth_configured": 2,
+      "depth_fitted": 2,
+      "n_leaves": 4,
+      "rules": "|--- n_words <= 70.5\n|   |--- n_chars <= 104.5\n|   |   |--- class: fake\n|   |--- n_chars >  104.5\n|   |   |--- class: real\n|--- n_words >  70.5\n|   |--- n_words <= 93.5\n|   |   |--- class: fake\n|   |--- n_words >  93.5\n|   |   |--- class: fake",
+      "note": "Thresholds are in RAW feature units (characters / words) because H2 does not standardise — see build_length_pipeline."
+    },
+    "depth_sweep_diagnostic": {
+      "macro_f1_by_depth": {
+        "max_depth_2": 0.743,
+        "max_depth_5": 0.748
+      },
+      "reported_depth": 2,
+      "note": "Diagnostic only — the reported H2 result is the configured depth. Deeper trees are recorded to show how much of the length-only signal the reported depth already captures."
+    },
+    "length_shortcut_floor_ceiling": {
+      "majority_class_macro_f1": 0.3333,
+      "floor_H_linear_macro_f1": 0.5744,
+      "ceiling_H2_nonlinear_macro_f1": 0.743,
+      "delta_H2_minus_H": 0.1686,
+      "source_files": {
+        "H": "H_length_only_ax_to_grind_val.json",
+        "H2": "H2_length_only_ax_to_grind_val.json"
+      },
+      "interpretation": "Both models see ONLY article length — identical features, data and seed. The gap between them is not extra information; it is the part of the length shortcut that a linear model structurally cannot express. Report the pair, not either number alone (DECISION_REGISTER M3-1). Content-based models must be compared against the CEILING to claim they learned something beyond length."
+    }
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "random_state": 42,
+      "experiment": {
+        "name": "length_only",
+        "description": "Experiment H2 — length-only baseline, NONLINEAR. Added by DECISION_REGISTER.md M3-1 (approved 2026-08-14). Identical to H in every respect except the classifier: same two length-derived features, still no access to article content whatsoever. It exists because Milestone 3 measured Ax-to-Grind's length↔label relationship as U-shaped (fake at both extremes, real in a narrow middle band), which a linear model structurally cannot express — so H's macro-F1 is a FLOOR on the length shortcut, not a measurement of it. H2 supplies the ceiling. RQ3 reports both.\n",
+        "classifier": "decision_tree",
+        "features": [
+          "n_chars",
+          "n_words"
+        ],
+        "standardise": false,
+        "params": {
+          "max_depth": 2,
+          "class_weight": "balanced"
+        },
+        "diagnostic_depths": [
+          2,
+          5
+        ]
+      }
+    }
+  }
+}
