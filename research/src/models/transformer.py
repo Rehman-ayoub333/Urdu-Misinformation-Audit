@@ -167,14 +167,23 @@ def build_dataset(
     Section 1's `padding="max_length"`, which describes *serving* (single request,
     fixed shape) rather than training.
 
-    This matters a lot in wall-clock terms. Ax-to-Grind's median article is 40
-    subword tokens against a 512 ceiling, so padding every row to 512 would spend
-    well over 90% of the compute on padding. Attention cost is quadratic in the
-    padded length, so dynamic padding cuts Colab GPU time by roughly an order of
-    magnitude on this corpus.
+    The saving is real but modest here, and worth stating accurately rather than
+    assuming: Ax-to-Grind's median article is 40 subword tokens, but the fake class
+    has a heavy tail, so in a batch of 16 at least one long article usually pulls
+    the batch maximum up. Measured over the real training split, E[batch max] is
+    **401 tokens against the 512 ceiling — about a 1.3x saving**, not the order of
+    magnitude the median length alone would suggest.
 
-    Results are unaffected: attention masks zero out pad positions either way, so
-    the two strategies are mathematically equivalent.
+    `group_by_length=True` would capture much more of that gap by bucketing
+    similar-length examples together, and is deliberately NOT used. Length predicts
+    the label in this corpus (`DECISION_REGISTER.md` M3-1: the top length decile is
+    100% fake), so length-homogeneous batches would also be label-homogeneous —
+    biasing per-batch gradient estimates along exactly the axis this project is
+    trying to measure. A modest speedup is not worth entangling the optimiser with
+    the confound under study.
+
+    Results are unaffected by dynamic padding itself: attention masks zero out pad
+    positions either way, so the two strategies are mathematically equivalent.
     """
     encodings = tokenizer(
         frame["text"].tolist(),
