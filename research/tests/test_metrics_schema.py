@@ -129,6 +129,27 @@ def test_healthy_predictions_are_not_flagged_as_collapsed() -> None:
     ] is False
 
 
+def test_majority_class_baseline_breaks_ties_deterministically() -> None:
+    """A tie must resolve the same way in every process.
+
+    The Ax-to-Grind test split is exactly 687/687, so this is the real case, not a
+    hypothetical. An earlier implementation used `max(set(...), key=count)`, which
+    resolved ties by set iteration order and flipped between runs under string
+    hash randomisation — every score stayed identical while the recorded
+    `majority_class` changed, leaving a metrics file that could not be reproduced.
+    """
+    balanced = ["real"] * 10 + ["fake"] * 10
+    first = majority_class_baseline(balanced, LABELS)["majority_class"]
+    for ordering in (balanced, list(reversed(balanced)), sorted(balanced)):
+        assert majority_class_baseline(ordering, LABELS)["majority_class"] == first
+
+
+def test_majority_class_baseline_picks_the_actual_majority() -> None:
+    """Tie-breaking must not override a genuine majority."""
+    skewed = ["real"] * 3 + ["fake"] * 17
+    assert majority_class_baseline(skewed, LABELS)["majority_class"] == "fake"
+
+
 def test_majority_class_baseline_on_balanced_data_is_one_third() -> None:
     """A collapsed predictor scores 0.333 macro-F1 on balanced binary data.
 

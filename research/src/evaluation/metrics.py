@@ -194,7 +194,15 @@ def majority_class_baseline(y_true: Sequence[str], labels: Sequence[str]) -> dic
     comparison ROADMAP.md's Milestone 3 acceptance criterion asks for.
     """
     y_true = list(y_true)
-    majority = max(set(y_true), key=y_true.count)
+    # Tie-break deterministically. The splits are near-exactly balanced (the
+    # Ax-to-Grind test split is 687/687), so this IS a tie in practice, and
+    # `max(set(...), key=count)` would resolve it by set iteration order — which
+    # varies between processes under string hash randomisation. That made the
+    # recorded `majority_class` flip between runs while every score stayed
+    # identical, leaving a metrics file that could not be reproduced byte-for-byte.
+    # Highest count first, then alphabetical.
+    counts = {label: y_true.count(label) for label in sorted(set(y_true))}
+    majority = min(counts.items(), key=lambda item: (-item[1], item[0]))[0]
     y_pred = [majority] * len(y_true)
     return {
         "majority_class": majority,

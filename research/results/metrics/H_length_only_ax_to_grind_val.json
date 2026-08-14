@@ -57,8 +57,8 @@
     "macro_f1": 0.3333333333333333
   },
   "run_metadata": {
-    "timestamp_utc": "2026-08-14T07:14:28.353481+00:00",
-    "git_commit": "f3fce6dd320f906488691ec9c530f455196f90ff",
+    "timestamp_utc": "2026-08-14T08:28:42.127472+00:00",
+    "git_commit": "7b4cd44b47676b87e50383e4f4506314842a3266",
     "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
     "python_version": "3.13.3",
     "platform": "Windows-10-10.0.19045-SP0",
