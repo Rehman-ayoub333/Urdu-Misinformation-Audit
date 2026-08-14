@@ -49,5 +49,23 @@ scikit-learn==1.9.0
 # from ad hoc CLI flags whose values aren't captured anywhere).
 PyYAML==6.0.3
 
+# --- Transformer fine-tuning (Experiments C, D — Milestone 4) ---
+# The scope note at the top of this file anticipated these arriving here, and they
+# are now imported by research/src/models/transformer.py.
+#
+# torch is pinned by VERSION only, deliberately not by build. On Linux (Colab) this
+# resolves to the CUDA wheel a T4 needs; the authoring environment installed the
+# same version's CPU build via `--index-url https://download.pytorch.org/whl/cpu`
+# for the dry run. Same version, same behaviour, different accelerator — pinning a
+# `+cpu` local would make this file uninstallable on Colab.
+torch==2.13.0
+# accelerate backs transformers' Trainer (device placement, fp16, dataloader prep).
+accelerate==1.14.0
+# huggingface_hub pushes each trained checkpoint to its staging repo (E17).
+huggingface_hub==1.27.0
+# transformers is already pinned above for the audit's tokenizer; the Trainer,
+# AutoModelForSequenceClassification and DataCollatorWithPadding come from the
+# same pin.
+
 # --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
 pytest==9.1.1

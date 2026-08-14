@@ -1,0 +1,88 @@
+# Experiment D — XLM-RoBERTa-base fine-tuning, in-domain on Ax-to-Grind.
+#
+# XLM-R is the primary model (DECISION_REGISTER.md R1/R4): it matches the model in
+# the paper being extended (Haroon 2026), which keeps this project's numbers
+# directly comparable to the result it is replicating.
+#
+# Hyperparameters below are standard fine-tuning defaults, not locked research
+# decisions — each carries a one-line rationale so it is defensible rather than
+# silently picked. Changing them does not require a DECISION_REGISTER row; changing
+# the MODEL, the seed set, or the metric would.
+
+version: 1
+
+model:
+  name: xlm-roberta-base
+  hf_model_id: xlm-roberta-base
+  experiment_id: D              # MASTER_PROJECT_BLUEPRINT.md Part 11's experiment table
+  num_labels: 2
+
+tokenizer:
+  # 512 = XLM-R's architectural ceiling (512 learned position embeddings).
+  # DECISION_REGISTER.md M4-1: "full, uncapped text" (blueprint Part 8) cannot mean
+  # literally unlimited, because the architecture forbids it. 512 is the only
+  # technically possible reading of "uncapped". ~4.7% of Ax-to-Grind is still
+  # truncated at this length — see M4-1 for what that means for RQ3.
+  max_length: 512
+  truncation: true
+  padding: max_length
+
+training:
+  # {42, 123, 2026} — fixed by REPRODUCIBILITY.md Section 2 and EXPERIMENT_PLAN.md
+  # Section 5. NOT a tunable: every transformer run uses exactly this set.
+  seeds: [42, 123, 2026]
+
+  # 2e-5: the standard fine-tuning rate for RoBERTa-family encoders. Higher rates
+  # destabilise pretrained weights; lower ones underfit within a small epoch budget.
+  learning_rate: 2.0e-5
+
+  # 16 fits a T4's 16 GB at 512 tokens for a base-size encoder with fp16 on. Raising
+  # it would risk OOM mid-run on the free tier, which is expensive in wall-clock time.
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 32
+  gradient_accumulation_steps: 1
+
+  # 3 epochs is the conventional range for fine-tuning on ~10k examples: enough to
+  # converge, few enough to avoid the overfitting a 6,405-row training set invites.
+  num_train_epochs: 3
+
+  # AdamW with 0.01 decay — the optimiser these checkpoints were pretrained with.
+  optimizer: adamw_torch
+  weight_decay: 0.01
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+
+  # 10% linear warmup, then linear decay. Warmup avoids large early updates wrecking
+  # pretrained representations before the classification head has learned anything.
+  warmup_ratio: 0.1
+  lr_scheduler_type: linear
+
+  # Mixed precision on GPU only; the dry run turns this off automatically on CPU,
+  # where fp16 is unsupported and would fail rather than merely be slow.
+  fp16: true
+
+  # Select the checkpoint by validation macro-F1, not loss — R5 makes macro-F1 the
+  # primary metric precisely because it exposes the prediction-collapse failure
+  # mode that a loss-selected checkpoint could hide.
+  eval_strategy: epoch
+  save_strategy: epoch
+  load_best_model_at_end: true
+  metric_for_best_model: macro_f1
+  greater_is_better: true
+  save_total_limit: 1           # Colab disk is small; only the best checkpoint is kept
+
+  logging_steps: 50
+  dataloader_num_workers: 2
+
+evaluation:
+  splits_evaluated: [val, test]
+  primary_metric: macro_f1
+
+checkpoint_push:
+  # Pushed to a STAGING repo, never straight to production. Promotion to
+  # MODEL_REPO_ID is a separate deliberate decision at Milestone 9
+  # (EXPERIMENT_PLAN.md Section 7 — the deployed checkpoint is chosen on
+  # defensibility, not raw in-domain F1).
+  enabled: true
+  staging_repo_suffix: urdu-misinfo-xlmr-staging
+  private: true
