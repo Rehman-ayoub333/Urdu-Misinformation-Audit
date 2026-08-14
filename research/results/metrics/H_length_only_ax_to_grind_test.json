@@ -1,0 +1,237 @@
+{
+  "experiment_id": "H",
+  "model": "length_only",
+  "dataset": "ax_to_grind",
+  "split": "test",
+  "seed": 42,
+  "n_examples": 1374,
+  "metrics": {
+    "accuracy": 0.6441048034934498,
+    "macro_f1": 0.6144601957290778,
+    "weighted_f1": 0.614460195729078,
+    "roc_auc": 0.5053234428532383,
+    "pr_auc": 0.6628104973753595
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        252,
+        435
+      ],
+      [
+        54,
+        633
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.8235294117647058,
+      "recall": 0.36681222707423583,
+      "f1": 0.5075528700906344,
+      "support": 687
+    },
+    "real": {
+      "precision": 0.5926966292134831,
+      "recall": 0.9213973799126638,
+      "f1": 0.7213675213675214,
+      "support": 687
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 306,
+      "real": 1068
+    },
+    "dominant_class_share": 0.7773,
+    "is_collapsed": false
+  },
+  "majority_class_baseline": {
+    "majority_class": "fake",
+    "accuracy": 0.5,
+    "macro_f1": 0.3333333333333333
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-14T07:14:31.245037+00:00",
+    "git_commit": "f3fce6dd320f906488691ec9c530f455196f90ff",
+    "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
+    "python_version": "3.13.3",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "n_train": 6405,
+    "train_split": "ax_to_grind_train",
+    "features_used": [
+      "n_chars",
+      "n_words"
+    ],
+    "uses_text_content": false,
+    "fitted_coefficients_toward_fake": {
+      "n_chars": -1.2906910417169173,
+      "n_words": 2.8719460288940155
+    },
+    "length_relationship_diagnostic": {
+      "feature": "n_words",
+      "roc_auc_of_raw_feature": 0.4995,
+      "bins": [
+        {
+          "bin": 1,
+          "range": [
+            6.0,
+            13.0
+          ],
+          "n": 101,
+          "fake_rate": 0.7525
+        },
+        {
+          "bin": 2,
+          "range": [
+            13.0,
+            16.0
+          ],
+          "n": 133,
+          "fake_rate": 0.7143
+        },
+        {
+          "bin": 3,
+          "range": [
+            16.0,
+            20.0
+          ],
+          "n": 172,
+          "fake_rate": 0.6163
+        },
+        {
+          "bin": 4,
+          "range": [
+            20.0,
+            24.0
+          ],
+          "n": 138,
+          "fake_rate": 0.3768
+        },
+        {
+          "bin": 5,
+          "range": [
+            24.0,
+            30.0
+          ],
+          "n": 131,
+          "fake_rate": 0.3206
+        },
+        {
+          "bin": 6,
+          "range": [
+            30.0,
+            37.0
+          ],
+          "n": 128,
+          "fake_rate": 0.2031
+        },
+        {
+          "bin": 7,
+          "range": [
+            37.0,
+            45.0
+          ],
+          "n": 151,
+          "fake_rate": 0.1523
+        },
+        {
+          "bin": 8,
+          "range": [
+            45.0,
+            57.0
+          ],
+          "n": 141,
+          "fake_rate": 0.1489
+        },
+        {
+          "bin": 9,
+          "range": [
+            57.0,
+            166.10000000000014
+          ],
+          "n": 141,
+          "fake_rate": 0.766
+        },
+        {
+          "bin": 10,
+          "range": [
+            166.10000000000014,
+            1088.0
+          ],
+          "n": 138,
+          "fake_rate": 1.0
+        }
+      ],
+      "is_monotonic": false,
+      "interpretation": "Non-monotonic: the positive rate is high at BOTH extremes and low in the middle. Rank-based AUC near 0.5 therefore understates the relationship, and a LINEAR model cannot express it — H's macro-F1 is a floor on the available length shortcut, not a measurement of it."
+    }
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "random_state": 42,
+      "experiment": {
+        "name": "length_only",
+        "description": "Experiment H — length-only baseline. Logistic regression over LENGTH-DERIVED FEATURES ONLY, with no access to article content whatsoever. This is the direct operationalisation of RQ3 (MASTER_PROJECT_BLUEPRINT.md Part 32: \"the fastest way to isolate the length shortcut — a linear model on word count alone\"). Its macro-F1 is the floor that any content-based model must clear to have demonstrated it learned something beyond article length.\n",
+        "classifier": "logistic_regression",
+        "features": [
+          "n_chars",
+          "n_words"
+        ],
+        "standardise": true,
+        "params": {
+          "C": 1.0,
+          "max_iter": 2000,
+          "class_weight": "balanced",
+          "solver": "liblinear"
+        }
+      }
+    }
+  }
+}

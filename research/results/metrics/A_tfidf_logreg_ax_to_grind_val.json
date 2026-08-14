@@ -1,0 +1,154 @@
+{
+  "experiment_id": "A",
+  "model": "tfidf_logreg",
+  "dataset": "ax_to_grind",
+  "split": "val",
+  "seed": 42,
+  "n_examples": 1372,
+  "metrics": {
+    "accuracy": 0.8739067055393586,
+    "macro_f1": 0.8738149350217834,
+    "weighted_f1": 0.8738149350217836,
+    "roc_auc": 0.943361184540455,
+    "pr_auc": 0.9470319686798365
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        581,
+        105
+      ],
+      [
+        68,
+        618
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.8952234206471494,
+      "recall": 0.8469387755102041,
+      "f1": 0.8704119850187266,
+      "support": 686
+    },
+    "real": {
+      "precision": 0.8547717842323651,
+      "recall": 0.9008746355685131,
+      "f1": 0.8772178850248403,
+      "support": 686
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 649,
+      "real": 723
+    },
+    "dominant_class_share": 0.527,
+    "is_collapsed": false
+  },
+  "majority_class_baseline": {
+    "majority_class": "real",
+    "accuracy": 0.5,
+    "macro_f1": 0.3333333333333333
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-14T07:08:16.934626+00:00",
+    "git_commit": "f3fce6dd320f906488691ec9c530f455196f90ff",
+    "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
+    "python_version": "3.13.3",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "n_train": 6405,
+    "train_split": "ax_to_grind_train"
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "random_state": 42,
+      "features": {
+        "tfidf": {
+          "word": {
+            "enabled": true,
+            "ngram_range": [
+              1,
+              2
+            ],
+            "min_df": 2,
+            "max_df": 0.9,
+            "max_features": 200000,
+            "sublinear_tf": true
+          },
+          "char": {
+            "enabled": true,
+            "analyzer": "char_wb",
+            "ngram_range": [
+              3,
+              5
+            ],
+            "min_df": 3,
+            "max_df": 0.9,
+            "max_features": 300000,
+            "sublinear_tf": true
+          },
+          "lowercase": false,
+          "strip_accents": null
+        }
+      },
+      "experiment": {
+        "name": "tfidf_logreg",
+        "description": "Experiment A — TF-IDF + Logistic Regression, in-domain on Ax-to-Grind",
+        "classifier": "logistic_regression",
+        "params": {
+          "C": 1.0,
+          "max_iter": 2000,
+          "class_weight": "balanced",
+          "solver": "liblinear"
+        }
+      }
+    }
+  }
+}
