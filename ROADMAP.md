@@ -28,12 +28,12 @@ Milestones are sequential and gated — do not start milestone N+1 until milesto
 **Commit point:** `data: audit, clean, deduplicate, and split datasets`.
 
 ## Milestone 3 — Classical baselines + length-only baseline
-**Objective:** experiments A, B, H complete with real metrics.
-**Files:** `research/src/models/classical.py`, `length_baseline.py`, `research/src/experiments/run_in_domain.py` (classical mode), `research/src/experiments/run_shortcut_analysis.py` (length-only mode).
-**Tasks:** per `EXPERIMENT_PLAN.md` Section 2, steps 1–2.
+**Objective:** experiments A, B, H, H2 complete with real metrics.
+**Files:** `research/src/models/classical.py`, `length_baseline.py`, `research/src/experiments/run_in_domain.py` (classical mode), `research/src/experiments/run_shortcut_analysis.py` (length-only mode, `--classifier {logistic_regression,decision_tree}`).
+**Tasks:** per `EXPERIMENT_PLAN.md` Section 2, steps 1–2 and 2b.
 **Tests:** unit tests for feature extraction determinism; metrics-output schema test.
-**Acceptance criteria:** `research/results/metrics/A_*.json`, `B_*.json`, `H_*.json` exist with real numbers; sanity-checked against `MASTER_PROJECT_BLUEPRINT.md` RQ1/RQ3 expected-range language (not required to match, just sane — e.g., not below chance).
-**Commit point:** `research: classical and length-only baselines (Experiments A, B, H)`.
+**Acceptance criteria:** `research/results/metrics/A_*.json`, `B_*.json`, `H_*.json`, `H2_*.json` exist with real numbers; sanity-checked against `MASTER_PROJECT_BLUEPRINT.md` RQ1/RQ3 expected-range language (not required to match, just sane — e.g., not below chance). H and H2 must be reported as a floor/ceiling pair, never individually (`DECISION_REGISTER.md` M3-1).
+**Commit point:** `research: classical and length-only baselines (Experiments A, B, H)`; H2 added afterwards as the M3-1 addendum.
 
 ## Milestone 4 — Transformer training (in-domain)
 **Objective:** experiments C, D complete, 3 seeds each, on Ax-to-Grind.
