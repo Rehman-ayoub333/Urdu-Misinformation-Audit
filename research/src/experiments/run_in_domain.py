@@ -123,14 +123,49 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", default="ax_to_grind")
     parser.add_argument("--data-config", default="data.yaml")
     parser.add_argument("--model-config", default="model_classical.yaml")
+    parser.add_argument(
+        "--experiments",
+        nargs="+",
+        choices=["C", "D"],
+        default=["C", "D"],
+        help="Transformer experiments to run. Ignored for --models classical.",
+    )
+    parser.add_argument(
+        "--no-push",
+        action="store_true",
+        help="Skip the staging checkpoint push (transformer runs only).",
+    )
     args = parser.parse_args(argv)
 
     if args.models == "transformer":
-        print(
-            "Transformer experiments (C, D) are Milestone 4 and are not implemented "
-            "here — see research/src/models/transformer.py.",
-        )
-        return 2
+        # EXPERIMENT_PLAN.md Section 2 step 3 names this script as C/D's entry point,
+        # so the transformer path lives behind the same command rather than a
+        # separate one. The training loop itself is research/src/models/transformer.py.
+        # Imported lazily: torch and transformers are heavy, and the classical path
+        # must stay runnable without them.
+        from research.src.models.transformer import run_experiment
+
+        data_config = load_config(args.data_config)
+        print("=== In-domain transformer fine-tuning (Experiments C, D) ===")
+        print(f"  experiments: {args.experiments}")
+
+        summaries = []
+        for experiment_id in args.experiments:
+            summaries.extend(
+                run_experiment(
+                    experiment_id,
+                    data_config=data_config,
+                    dry_run=None,
+                    push=not args.no_push,
+                )
+            )
+        print("\n=== summary ===")
+        for summary in summaries:
+            print(
+                f"  {summary['experiment_id']} seed={summary['seed']} "
+                f"{summary['train_seconds']:.0f}s -> {summary['push']}"
+            )
+        return 0
 
     data_config = load_config(args.data_config)
     model_config = load_config(args.model_config)
