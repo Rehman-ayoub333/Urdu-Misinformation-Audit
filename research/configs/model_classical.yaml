@@ -92,6 +92,51 @@ experiments:
       class_weight: balanced
       solver: liblinear
 
+  H2:
+    # Same `name` as H on purpose: it drives the metrics filename, and the pair is
+    # meant to be read as one result (H_length_only_*.json / H2_length_only_*.json).
+    # `experiment_id` is what distinguishes them inside the record.
+    name: length_only
+    description: >
+      Experiment H2 — length-only baseline, NONLINEAR. Added by
+      DECISION_REGISTER.md M3-1 (approved 2026-08-14). Identical to H in every
+      respect except the classifier: same two length-derived features, still no
+      access to article content whatsoever. It exists because Milestone 3 measured
+      Ax-to-Grind's length↔label relationship as U-shaped (fake at both extremes,
+      real in a narrow middle band), which a linear model structurally cannot
+      express — so H's macro-F1 is a FLOOR on the length shortcut, not a
+      measurement of it. H2 supplies the ceiling. RQ3 reports both.
+    classifier: decision_tree
+    features:
+      # Byte-for-byte the same registry as H. If these two lists ever diverge,
+      # the floor/ceiling comparison stops being like-for-like and means nothing.
+      - n_chars
+      - n_words
+    # Not standardised — see build_length_pipeline. A tree is invariant to
+    # rescaling, so this cannot affect the score, but it keeps the learned
+    # thresholds in raw word/character counts, which is what makes them readable.
+    standardise: false
+    params:
+      # REPORTED CONFIG: depth 2. Chosen over depth 5 deliberately, and the
+      # measured gap is why: M3-1 found 0.7552 at depth 2 against 0.7625 at depth
+      # 5 — an extra 0.007 for 2.5x the depth. Depth 2 is the *minimum* capacity
+      # that can express "inside or outside a band" (one split per band edge), so
+      # its score cannot be waved away as a high-capacity model memorising the
+      # training split; and depth 5 buying almost nothing on top is itself
+      # evidence that the band structure is the whole of the available signal.
+      # A conservative ceiling is the useful one here: the claim H2 supports is
+      # "length alone reaches ~0.76", and it is stronger when the model making it
+      # is as simple as possible. Depth 5 is still measured and recorded, as
+      # `depth_sweep_diagnostic`, so the choice stays auditable.
+      max_depth: 2
+      class_weight: balanced
+      # Nothing else is set. Depth is the only regulariser, deliberately: it keeps
+      # H2 exactly the probe M3-1 measured, so the committed number is directly
+      # comparable to the one that motivated the decision.
+    # Secondary diagnostic, not the reported result. Exactly the two probes M3-1
+    # measured when it proposed H2.
+    diagnostic_depths: [2, 5]
+
 evaluation:
   # EXPERIMENT_PLAN.md Section 4's output contract.
   primary_metric: macro_f1          # DECISION_REGISTER.md R5

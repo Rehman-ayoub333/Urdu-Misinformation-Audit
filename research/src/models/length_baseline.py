@@ -23,6 +23,14 @@ whatever it is (`CLAUDE.md` rule 2).
 Feature extraction deliberately duplicates nothing from `audit.py`: both derive
 counts from the same Tier-2-cleaned text, and `extract_length_features` is the
 single definition used for training, evaluation and the determinism test.
+
+**Experiment H2** (`DECISION_REGISTER.md` M3-1, approved 2026-08-14) lives here
+too. Milestone 3 measured the length↔label relationship on Ax-to-Grind as
+U-shaped — fake articles at both extremes, real in a narrow middle band — which a
+linear model structurally cannot express. H2 fits a depth-capped decision tree
+over the *same* feature registry, so the pair reads as floor (H, linear) and
+ceiling (H2, nonlinear) on the same information. H itself is unchanged, per
+`MASTER_PROJECT_BLUEPRINT.md` Part 32's stated design.
 """
 
 from __future__ import annotations
@@ -32,15 +40,30 @@ from typing import Any, Sequence
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier, export_text
 
 __all__ = [
+    "SUPPORTED_CLASSIFIERS",
     "SUPPORTED_FEATURES",
-    "extract_length_features",
     "build_length_pipeline",
+    "depth_sweep_diagnostic",
+    "describe_tree",
+    "extract_length_features",
     "fit_predict_length",
+    "length_relationship_diagnostic",
 ]
+
+# The only classifiers a length-only experiment may use, and which experiment key
+# each belongs to. Explicit for the same reason SUPPORTED_FEATURES is: the point
+# of H/H2 is that the *only* difference between them is linear vs nonlinear, so a
+# third variant appearing by accident would blur the floor/ceiling reading.
+SUPPORTED_CLASSIFIERS: dict[str, str] = {
+    "logistic_regression": "H",
+    "decision_tree": "H2",
+}
 
 _WORD = re.compile(r"\S+")
 
@@ -146,26 +169,39 @@ def length_relationship_diagnostic(
     }
 
 
-def build_length_pipeline(config: dict[str, Any]) -> Pipeline:
-    """StandardScaler -> LogisticRegression over length features only.
+def build_length_pipeline(config: dict[str, Any], experiment_key: str = "H") -> Pipeline:
+    """Optional StandardScaler -> classifier, over length features only.
 
-    Scaling matters here: raw counts span roughly 10 to 5,000, which makes
-    logistic regression converge poorly and renders the fitted coefficients
-    uninterpretable — and the coefficient sign is part of what makes this
-    experiment readable ("longer => more likely fake").
+    H scales: raw counts span roughly 10 to 5,000, which makes logistic regression
+    converge poorly and renders the fitted coefficients uninterpretable — and the
+    coefficient sign is part of what makes that experiment readable ("longer =>
+    more likely fake").
+
+    H2 does not scale. A decision tree is invariant to monotone rescaling of each
+    feature, so scaling cannot change its score — but it *would* change the
+    learned thresholds from raw word counts into standard deviations, and those
+    thresholds are the readable output of H2 ("real articles sit between N and M
+    words"). Leaving the features raw keeps them interpretable at no cost.
     """
-    experiment = config["experiments"]["H"]
-    steps = []
-    if experiment.get("standardise", True):
-        steps.append(("scaler", StandardScaler()))
-    steps.append(
-        (
-            "classifier",
-            LogisticRegression(
-                random_state=config["random_state"], **experiment.get("params", {})
-            ),
+    experiment = config["experiments"][experiment_key]
+    kind = experiment.get("classifier", "logistic_regression")
+    if kind not in SUPPORTED_CLASSIFIERS:
+        raise ValueError(
+            f"unsupported length-only classifier {kind!r}; "
+            f"supported: {sorted(SUPPORTED_CLASSIFIERS)}"
         )
-    )
+
+    steps = []
+    if experiment.get("standardise", kind == "logistic_regression"):
+        steps.append(("scaler", StandardScaler()))
+
+    params = experiment.get("params", {})
+    classifier: Any
+    if kind == "logistic_regression":
+        classifier = LogisticRegression(random_state=config["random_state"], **params)
+    else:
+        classifier = DecisionTreeClassifier(random_state=config["random_state"], **params)
+    steps.append(("classifier", classifier))
     return Pipeline(steps)
 
 
@@ -180,9 +216,13 @@ def fit_predict_length(
 ) -> tuple[list[str], list[float] | None, dict[str, float]]:
     """Fit and predict from length features alone.
 
-    Also returns the fitted coefficient per feature, so the direction of the
-    relationship is recorded in the metrics file rather than left to be inferred
-    from the score.
+    Also returns a per-feature attribution, so *how* the model used length is
+    recorded in the metrics file rather than left to be inferred from the score.
+    Its meaning depends on the classifier and the caller labels it accordingly:
+    signed coefficients oriented toward the positive label for H (a positive
+    value reads as "more of this feature => more likely fake"), unsigned impurity
+    importances for H2 (a tree has no single direction to report — that is the
+    whole reason H2 exists).
     """
     x_train = extract_length_features(train_texts, feature_names)
     x_eval = extract_length_features(eval_texts, feature_names)
@@ -197,11 +237,92 @@ def fit_predict_length(
         probabilities = pipeline.predict_proba(x_eval)
         scores = [float(row[classes.index(positive_label)]) for row in probabilities]
 
-    # Coefficients are signed toward classes_[1] in scikit-learn's binary case.
-    raw = np.asarray(classifier.coef_).ravel()
-    oriented = raw if classes[1] == positive_label else -raw
-    coefficients = {
-        name: float(value) for name, value in zip(feature_names, oriented)
+    if hasattr(classifier, "coef_"):
+        # Coefficients are signed toward classes_[1] in scikit-learn's binary case.
+        raw = np.asarray(classifier.coef_).ravel()
+        values = raw if classes[1] == positive_label else -raw
+    else:
+        values = np.asarray(classifier.feature_importances_).ravel()
+    attribution = {name: float(value) for name, value in zip(feature_names, values)}
+
+    return predictions, scores, attribution
+
+
+def describe_tree(pipeline: Pipeline, feature_names: Sequence[str]) -> dict[str, Any]:
+    """Export the fitted tree's actual decision rules.
+
+    H2's score says *how much* length predicts the label; this says *what rule*
+    does it. On a U-shaped relationship the rule is the finding — a tree that
+    splits out a middle band of word counts as "real" is direct evidence for the
+    band structure the M3-1 diagnostic inferred from per-decile rates, obtained by
+    a completely different route.
+    """
+    tree = pipeline.named_steps["classifier"]
+    return {
+        "max_depth_configured": tree.get_params().get("max_depth"),
+        "depth_fitted": int(tree.get_depth()),
+        "n_leaves": int(tree.get_n_leaves()),
+        "rules": export_text(tree, feature_names=list(feature_names), decimals=1).strip(),
+        "note": (
+            "Thresholds are in RAW feature units (characters / words) because H2 "
+            "does not standardise — see build_length_pipeline."
+        ),
     }
 
-    return predictions, scores, coefficients
+
+def depth_sweep_diagnostic(
+    config: dict[str, Any],
+    train_texts: Sequence[str],
+    train_labels: Sequence[str],
+    eval_texts: Sequence[str],
+    eval_labels: Sequence[str],
+    feature_names: Sequence[str],
+    depths: Sequence[int],
+    *,
+    experiment_key: str = "H2",
+) -> dict[str, Any]:
+    """Macro-F1 at each capped depth, as a secondary data point on H2's headline.
+
+    H2 reports one depth (see the config's `max_depth`). This records the others
+    that were measured, so "would a deeper tree have found much more?" is answered
+    by a number in the file instead of being re-run later — the same pattern H uses
+    for `length_relationship_diagnostic`.
+    """
+    scores: dict[str, float] = {}
+    for depth in depths:
+        probe_config = {
+            **config,
+            "experiments": {
+                **config["experiments"],
+                experiment_key: {
+                    **config["experiments"][experiment_key],
+                    "params": {
+                        **config["experiments"][experiment_key].get("params", {}),
+                        "max_depth": depth,
+                    },
+                },
+            },
+        }
+        pipeline = build_length_pipeline(probe_config, experiment_key)
+        predictions, _, _ = fit_predict_length(
+            pipeline,
+            train_texts,
+            train_labels,
+            eval_texts,
+            feature_names,
+            positive_label="",
+        )
+        scores[f"max_depth_{depth}"] = round(
+            float(f1_score(list(eval_labels), predictions, average="macro", zero_division=0)),
+            4,
+        )
+
+    return {
+        "macro_f1_by_depth": scores,
+        "reported_depth": config["experiments"][experiment_key]["params"]["max_depth"],
+        "note": (
+            "Diagnostic only — the reported H2 result is the configured depth. "
+            "Deeper trees are recorded to show how much of the length-only signal "
+            "the reported depth already captures."
+        ),
+    }
