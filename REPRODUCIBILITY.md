@@ -6,6 +6,8 @@ Expands `MASTER_PROJECT_BLUEPRINT.md` Part 25 into exact, implementable conventi
 
 Python 3.11 pinned (backend `pyproject.toml`, research `requirements.txt`, and CI both target this exact minor version). All Python package versions pinned exactly (`==`, not `>=`) in `backend/requirements.txt` and `research/requirements.txt` — critically `torch`, `transformers`, `captum`, `scikit-learn`, `fastapi`. Node/npm versions pinned via `frontend/package.json`'s `engines` field and a committed lockfile (`package-lock.json`).
 
+> ⚠️ **The 3.11 pin above is currently not met by any environment this project runs in, and `research/requirements.txt` cannot be installed on 3.11 at all** (`numpy==2.5.2` requires ≥3.12). Observed: local dev 3.13.3, Colab 3.12. Logged as **`DECISION_REGISTER.md` M4-2 — DECISION REQUIRED**, awaiting Rehman. The pin is left as written until that is resolved; do not change it, and do not treat the drift as accepted.
+
 ## 2. Seeds
 
 Fixed set `{42, 123, 2026}` for every 3-seed transformer experiment (`EXPERIMENT_PLAN.md` Section 5); seed is a required field in every `research/configs/model_*.yaml` run — no experiment script accepts an unseeded run for a transformer model. Classical baselines (deterministic) don't need seed repetition but still record `random_state=42` explicitly in config rather than relying on a library default.
