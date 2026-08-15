@@ -66,6 +66,32 @@ huggingface_hub==1.27.0
 # transformers is already pinned above for the audit's tokenizer; the Trainer,
 # AutoModelForSequenceClassification and DataCollatorWithPadding come from the
 # same pin.
+#
+# --- torchvision and torchaudio must NOT be installed -------------------------
+# Deliberately absent, and the notebook actively uninstalls them before installing
+# this file. This is not tidiness; it is the fix for a hard import failure.
+#
+# transformers 5.15.0 declares torchvision only under its `vision`/`all`/`dev`
+# extras, never in the base install (verified against the package's own
+# requires_dist), so nothing here pulls it in. Colab, however, PREINSTALLS it.
+# Installing this file then moves torch to the pin above and leaves Colab's
+# torchvision — built against a different torch — sitting next to it. transformers
+# guards its torchvision import with `is_torchvision_available()`, which only
+# checks whether the package is INSTALLED, not whether it imports; a
+# present-but-incompatible copy therefore passes the guard and then raises
+# RuntimeError (not ImportError) from its C++ op registration, which no except
+# clause on that path catches:
+#
+#     transformers/image_utils.py: from torchvision.io import ImageReadMode, ...
+#     torchvision/_meta_registrations.py: @torch.library.register_fake("torchvision::nms")
+#     RuntimeError: operator torchvision::nms does not exist
+#
+# Verified empirically on CPU, all three directions: with torchvision absent
+# `from transformers import Trainer` succeeds and torchvision is never even
+# imported; installing torchvision==0.26.0 (which requires torch==2.11.0)
+# alongside torch 2.13.0 reproduces the error exactly; uninstalling it fixes it
+# again. This project does zero vision and zero audio work, so absence costs
+# nothing. Do not add either package without a DECISION_REGISTER.md row.
 
 # --- Testing (TESTING_STRATEGY.md Section 1, "Data validation tests") ---
 pytest==9.1.1
