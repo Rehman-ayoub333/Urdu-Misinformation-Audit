@@ -108,7 +108,7 @@ Open `research/notebooks/04_transformer_training.ipynb` in Colab and run every c
 top to bottom. It:
 
 1. checks a GPU is attached,
-2. clones the repo at the current commit,
+2. syncs the repo to the branch tip and prints the commit it landed on,
 3. installs `research/requirements.txt` (pinned),
 4. reads `HF_TOKEN` from Colab Secrets and `HF_STAGING_PREFIX` from the cell,
 5. runs a fast **smoke test** (a few real steps on a tiny slice) before the real job —
@@ -116,6 +116,22 @@ top to bottom. It:
 6. runs all 6 real training runs,
 7. pushes checkpoints and prints a summary table,
 8. zips the metrics files for download.
+
+### If a fix has landed since you opened the notebook
+
+**Re-open the notebook from GitHub. Do not just restart the runtime.**
+
+`Runtime → Restart session` restarts the *kernel*; it does **not** reload the
+notebook source in a tab you already have open. So after a fix is pushed, an open
+tab keeps executing the old cells while step 2 above pulls the new repo code — the
+two drift apart and the failure looks like the fix did not work. This happened on
+2026-08-15: the data check ran unscoped and the smoke test hit the torchvision
+error, both because the tab predated the fix.
+
+`File → Open notebook → GitHub → this repo → 04_transformer_training.ipynb`, then
+run from the top. Section 3's second cell now compares the notebook you are running
+against the committed one and stops with an explicit message if yours is older, so
+you will not have to diagnose this by hand again.
 
 ---
 
