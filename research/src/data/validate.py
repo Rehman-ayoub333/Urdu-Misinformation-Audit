@@ -26,7 +26,8 @@ block inside `Combined .csv`, so it has 5,051 duplicate values and cannot identi
 a row.
 
 Usage:
-    python -m research.src.data.validate          # run all checks, print a report
+    python -m research.src.data.validate                     # both datasets
+    python -m research.src.data.validate --only ax_to_grind  # one dataset
 """
 
 from __future__ import annotations
@@ -383,26 +384,47 @@ def check_fake_news_still_corrupt() -> tuple[bool, str]:
     )
 
 
+LOADERS = {"ax_to_grind": load_ax_to_grind, "notri_fact": load_notri_fact}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args(argv)
+    parser.add_argument(
+        "--only",
+        choices=sorted(LOADERS),
+        help=(
+            "Validate a single dataset instead of both. Mirrors download.py's flag, "
+            "and exists for the same reason: a milestone that legitimately needs only "
+            "one corpus present should not fail on the absence of the other. "
+            "Milestone 4 (Experiments C, D) trains and evaluates on Ax-to-Grind alone; "
+            "Notri-Fact is the held-out cross-dataset test set and is not read until "
+            "Milestone 5 (EXPERIMENT_PLAN.md step 4). Default remains both datasets, "
+            "so nothing narrows unless it is asked for explicitly."
+        ),
+    )
+    args = parser.parse_args(argv)
 
+    requested = (args.only,) if args.only else tuple(LOADERS)
     failures: list[str] = []
 
-    print("=== M1-3 source checks ===")
-    ok, message = check_fake_news_still_corrupt()
-    print(f"  {message}")
-    if not ok:
-        failures.append("fake-news provenance")
+    # Both M1-3 checks read Ax-to-Grind files only, so they run whenever it is in
+    # scope and are skipped entirely when it is not.
+    if "ax_to_grind" in requested:
+        print("=== M1-3 source checks ===")
+        ok, message = check_fake_news_still_corrupt()
+        print(f"  {message}")
+        if not ok:
+            failures.append("fake-news provenance")
 
-    ok, message = cross_check_true_news()
-    print(f"  {message}")
-    if not ok:
-        failures.append("true-news cross-check")
+        ok, message = cross_check_true_news()
+        print(f"  {message}")
+        if not ok:
+            failures.append("true-news cross-check")
 
     print("\n=== Loading and schema validation ===")
-    for name, loader in (("ax_to_grind", load_ax_to_grind), ("notri_fact", load_notri_fact)):
-        frame, report = loader()
+    print(f"  datasets in scope: {list(requested)}\n")
+    for name in requested:
+        frame, report = LOADERS[name]()
         print(report.render())
         try:
             validate_schema(frame, name)
