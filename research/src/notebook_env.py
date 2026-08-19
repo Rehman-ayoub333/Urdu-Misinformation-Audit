@@ -21,6 +21,14 @@ deliberately:
 * **explicit on failure** — an unknown platform raises with the actual fix, not a
   bare KeyError three cells later.
 
+**Detection is Kaggle-first, and that is load-bearing.** Kaggle's notebook image
+is built `FROM` the Colab runtime image, so `import google.colab` SUCCEEDS on
+Kaggle while being completely non-functional there. An earlier version of this
+module treated that import as proof of Colab and checked it first, on the stated
+but false assumption that "no environment provides both helper packages" — which
+contradicted this project's own M4-3 finding. It misidentified every Kaggle
+session. See `detect_platform()` for the full account.
+
 Nothing here is research logic. `REPRODUCIBILITY.md` Section 7 forbids notebooks
 carrying independent logic that produces a reported number; this produces none —
 it resolves an environment. It lives in `research/src/` rather than inline in the
@@ -43,6 +51,32 @@ UNKNOWN = "unknown"
 # produces a file nobody can retrieve.
 _WORKING_ROOT = {COLAB: "/content", KAGGLE: "/kaggle/working"}
 
+# --------------------------------------------------------------------------
+# Detection signals.
+#
+# ORDER IS LOAD-BEARING: Kaggle is checked first, and this is a correctness
+# requirement, not a tie-break convention. See detect_platform().
+#
+# Env vars Kaggle sets on every notebook session. KAGGLE_KERNEL_RUN_TYPE is the
+# one the notebook's own pre-flight cell already uses successfully.
+_KAGGLE_ENV_VARS = (
+    "KAGGLE_KERNEL_RUN_TYPE",
+    "KAGGLE_URL_BASE",
+    "KAGGLE_CONTAINER_NAME",
+    "KAGGLE_DATA_PROXY_TOKEN",
+)
+# Kaggle's mount root. Module-level so tests can point it somewhere real.
+_KAGGLE_DIR = "/kaggle"
+
+# Env vars Colab sets. Unlike `google.colab`, these do NOT survive into Kaggle's
+# image, so they are a genuine positive signal rather than an inherited artifact.
+_COLAB_ENV_VARS = (
+    "COLAB_RELEASE_TAG",
+    "COLAB_GPU",
+    "COLAB_JUPYTER_IP",
+    "COLAB_BACKEND_VERSION",
+)
+
 
 def _can_import(module: str) -> bool:
     """True if `module` is importable, without keeping it imported.
@@ -59,20 +93,66 @@ def _can_import(module: str) -> bool:
     return True
 
 
+def kaggle_signals() -> list[str]:
+    """Positive evidence that this is a Kaggle notebook session."""
+    found = [f"env:{name}" for name in _KAGGLE_ENV_VARS if os.environ.get(name)]
+    if os.path.isdir(_KAGGLE_DIR):
+        found.append(f"dir:{_KAGGLE_DIR}")
+    # Last, and never alone-sufficient in practice: weaker than the others because
+    # a module by this name could in principle be installed anywhere. It is listed
+    # so the diagnostic is complete.
+    if _can_import("kaggle_secrets"):
+        found.append("import:kaggle_secrets")
+    return found
+
+
+def colab_signals() -> list[str]:
+    """Positive evidence that this is a Colab session.
+
+    `google.colab` is listed LAST and deliberately treated as the weakest signal:
+    it is importable on Kaggle too, because Kaggle's notebook image is built
+    `FROM` the Colab runtime image (`DECISION_REGISTER.md` M4-3) and inherits its
+    site-packages. The COLAB_* environment variables do not survive that
+    inheritance, so they are the trustworthy ones.
+    """
+    found = [f"env:{name}" for name in _COLAB_ENV_VARS if os.environ.get(name)]
+    if _can_import("google.colab"):
+        found.append("import:google.colab")
+    return found
+
+
+def platform_markers() -> dict[str, list[str]]:
+    """Every detection signal found, for diagnostics.
+
+    The notebook prints this next to the detected platform. When detection went
+    wrong on a live Kaggle session on 2026-08-19 there was nothing to inspect —
+    only the wrong answer — which is what turned a one-line bug into a round trip.
+    """
+    return {KAGGLE: kaggle_signals(), COLAB: colab_signals()}
+
+
 def detect_platform() -> str:
     """Return COLAB, KAGGLE or UNKNOWN.
 
-    Order matters only for determinism, not correctness — no environment
-    provides both helper packages. Colab is checked first because it is the
-    platform this notebook was originally written for.
+    **Kaggle is checked first, and that ordering is a correctness requirement.**
+
+    The inheritance is one-directional: Kaggle's notebook image is built `FROM`
+    the Colab runtime image (`DECISION_REGISTER.md` M4-3), so Colab's packages
+    are present on Kaggle, while Kaggle's markers never appear on Colab. Checking
+    Colab first therefore misidentifies every Kaggle session, which is exactly
+    what happened live on 2026-08-19: `import google.colab` succeeded on a Kaggle
+    P100, detection returned "colab", and `userdata.get()` hung and then raised
+    Colab's own TimeoutException ("Secrets can only be fetched when running from
+    the Colab UI") — a present-but-nonfunctional leftover, the same category of
+    failure as the inherited torchvision copy M4-3 already documents.
+
+    A Kaggle-positive signal is therefore conclusive; a Colab-positive one is
+    only meaningful once Kaggle has been ruled out.
     """
-    if _can_import("google.colab"):
-        return COLAB
-    # Kaggle sets this on every notebook session; the kaggle_secrets import is the
-    # confirming check. Either alone is weaker: the env var is settable by hand,
-    # and `kaggle_secrets` can be pip-installed locally.
-    if os.environ.get("KAGGLE_KERNEL_RUN_TYPE") or _can_import("kaggle_secrets"):
+    if kaggle_signals():
         return KAGGLE
+    if colab_signals():
+        return COLAB
     return UNKNOWN
 
 
@@ -98,9 +178,14 @@ def get_secret(name: str) -> str:
             value = userdata.get(name)
         except Exception as exc:
             raise RuntimeError(
-                f"Could not read {name} from Colab Secrets. Open the key icon in the "
-                f"left sidebar, add {name} (HF token role: write), enable 'Notebook "
-                f"access' for this notebook, then rerun this cell. ({exc})"
+                f"Could not read {name} from Colab Secrets (detected platform: "
+                f"{platform}). Open the key icon in the left sidebar, add {name} "
+                f"(HF token role: write), enable 'Notebook access' for this notebook, "
+                f"then rerun this cell.\n\n"
+                f"If you are NOT actually on Colab, this is a misdetection, not a "
+                f"missing secret — the Colab secrets API raises this same timeout when "
+                f"called outside the Colab UI. Signals found: {platform_markers()}. "
+                f"Report that mapping rather than working around it.\n\n({exc})"
             ) from exc
 
     elif platform == KAGGLE:

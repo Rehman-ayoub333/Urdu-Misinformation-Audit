@@ -26,12 +26,19 @@ from research.src import notebook_env
 
 
 @pytest.fixture(autouse=True)
-def _clean_env(monkeypatch):
-    """Neither platform present, and no ambient Kaggle env var, unless a test says so."""
+def _clean_env(monkeypatch, tmp_path):
+    """Neither platform present, unless a test says otherwise.
+
+    Clears every signal detect_platform() consults — both platforms' env vars, both
+    helper modules, and the /kaggle directory probe (pointed at a path that does
+    not exist, so a real /kaggle on the host cannot leak into a test).
+    """
     monkeypatch.delitem(sys.modules, "google.colab", raising=False)
     monkeypatch.delitem(sys.modules, "kaggle_secrets", raising=False)
-    monkeypatch.delenv("KAGGLE_KERNEL_RUN_TYPE", raising=False)
+    for name in notebook_env._KAGGLE_ENV_VARS + notebook_env._COLAB_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.setattr(notebook_env, "_KAGGLE_DIR", str(tmp_path / "no-kaggle-here"))
 
 
 def _install_colab(monkeypatch, *, secret="colab-token", raises=None, downloads=None):
@@ -125,11 +132,103 @@ def test_kaggle_is_used_when_colab_absent(monkeypatch):
     assert notebook_env.get_secret("HF_TOKEN") == "fallback-worked"
 
 
-def test_colab_wins_when_both_present(monkeypatch):
-    """Not a real environment, but detection must still be deterministic."""
+# --------------------------------------------------------------------------
+# REGRESSION: the live 2026-08-19 Kaggle failure.
+#
+# Kaggle's notebook image is built FROM the Colab runtime image, so google.colab
+# is importable there but non-functional. Detection used to check Colab first and
+# so returned "colab" on a real Kaggle P100; userdata.get() then hung and raised
+# Colab's TimeoutException. The previous version of this file asserted the WRONG
+# precedence ("colab wins when both present"), which is why 19 green tests did not
+# catch it. These reproduce the ambiguous condition exactly.
+# --------------------------------------------------------------------------
+
+
+class _ColabTimeout(Exception):
+    """Stand-in for google.colab.errors.NotebookAccessError / TimeoutException."""
+
+
+def _simulate_kaggle_with_inherited_colab(monkeypatch, **kwargs):
+    """A real Kaggle session: Kaggle's markers AND Colab's inherited package.
+
+    The Colab stub raises on userdata.get(), exactly as the live session did — so
+    a test that resolves to Colab fails loudly rather than quietly returning a
+    plausible value.
+    """
+    _install_colab(
+        monkeypatch,
+        raises=_ColabTimeout(
+            "Requesting secret HF_TOKEN timed out. Secrets can only be fetched "
+            "when running from the Colab UI"
+        ),
+    )
+    _install_kaggle(monkeypatch, **kwargs)
+
+
+def test_kaggle_wins_over_inherited_colab_package(monkeypatch):
+    """The exact live failure: both markers present must resolve to Kaggle."""
+    _simulate_kaggle_with_inherited_colab(monkeypatch)
+    assert notebook_env.detect_platform() == notebook_env.KAGGLE
+
+
+def test_secret_read_survives_inherited_colab_package(monkeypatch):
+    """End to end: the secret comes from Kaggle, not from the Colab timeout path."""
+    _simulate_kaggle_with_inherited_colab(monkeypatch, secret="hf_from_kaggle")
+    assert notebook_env.get_secret("HF_TOKEN") == "hf_from_kaggle"
+
+
+def test_kaggle_dir_alone_beats_importable_google_colab(monkeypatch, tmp_path):
+    """Even with no KAGGLE_* env var set, /kaggle outranks an importable google.colab."""
+    _install_colab(monkeypatch, raises=_ColabTimeout("timed out"))
+    kaggle_dir = tmp_path / "kaggle"
+    kaggle_dir.mkdir()
+    monkeypatch.setattr(notebook_env, "_KAGGLE_DIR", str(kaggle_dir))
+    assert notebook_env.detect_platform() == notebook_env.KAGGLE
+
+
+def test_paths_and_delivery_follow_the_corrected_detection(monkeypatch):
+    """The misdetection also silently broke these two — /content on Kaggle is
+    unretrievable, and files.download does not exist there."""
+    _simulate_kaggle_with_inherited_colab(monkeypatch)
+    assert notebook_env.working_root() == Path("/kaggle/working")
+    assert notebook_env.repo_dir() == Path("/kaggle/working/repo")
+    assert "Output" in notebook_env.deliver_file("/kaggle/working/metrics.zip")
+
+
+def test_colab_still_detected_when_kaggle_is_genuinely_absent(monkeypatch):
+    """The fix must not break Colab: no Kaggle marker means google.colab is trusted."""
     _install_colab(monkeypatch, secret="from-colab")
-    _install_kaggle(monkeypatch, secret="from-kaggle")
+    assert notebook_env.detect_platform() == notebook_env.COLAB
     assert notebook_env.get_secret("HF_TOKEN") == "from-colab"
+
+
+def test_colab_env_var_alone_detects_colab(monkeypatch):
+    """COLAB_* env vars are the trustworthy Colab signal; they do not reach Kaggle."""
+    monkeypatch.setenv("COLAB_RELEASE_TAG", "release-colab_20260514")
+    assert notebook_env.detect_platform() == notebook_env.COLAB
+
+
+def test_markers_report_both_sides(monkeypatch):
+    """The diagnostic must show the evidence, which is what was missing live."""
+    _simulate_kaggle_with_inherited_colab(monkeypatch)
+    markers = notebook_env.platform_markers()
+    assert "env:KAGGLE_KERNEL_RUN_TYPE" in markers[notebook_env.KAGGLE]
+    assert "import:google.colab" in markers[notebook_env.COLAB]
+
+
+def test_colab_branch_error_names_the_detected_platform(monkeypatch):
+    """A Colab-path failure must say which platform was detected and why.
+
+    The old message said 'Colab UI' unconditionally, which on Kaggle pointed at a
+    UI that does not exist and hid the real cause.
+    """
+    _install_colab(monkeypatch, raises=_ColabTimeout("timed out"))
+    with pytest.raises(RuntimeError) as excinfo:
+        notebook_env.get_secret("HF_TOKEN")
+    message = str(excinfo.value)
+    assert "detected platform: colab" in message
+    assert "misdetection" in message
+    assert "import:google.colab" in message
 
 
 def test_missing_secret_on_colab_raises_actionable_error(monkeypatch):
