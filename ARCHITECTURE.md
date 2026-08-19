@@ -55,7 +55,7 @@ The **research pipeline** (dataset audit, training, evaluation, cross-dataset te
 | Styling | Tailwind CSS + shadcn/ui + custom design tokens | E3 |
 | Frontend state | React built-in state + typed fetch client | E4 |
 | Charts | Recharts | E5 |
-| Backend framework | FastAPI + Pydantic v2, Python 3.11 | E6 |
+| Backend framework | FastAPI + Pydantic v2, Python 3.12 | E6, re-pinned by M4-2 |
 | Backend layering | routers → services → ml | E7 |
 | Database | None (MVP); SQLite if a stretch feature needs it | E8/E9 |
 | Rate limiting | In-process IP-based (`slowapi`) | E10 |
@@ -163,7 +163,7 @@ urdu-misinfo-audit/
 │   ├── tests/                         # data-validation tests (TESTING_STRATEGY.md S1's
 │   │   └── test_raw_data_integrity.py # "Data validation tests" — own pytest target
 │   ├── requirements.txt               # pinned per REPRODUCIBILITY.md Section 1
-│   ├── pyproject.toml                 # pytest config; pins Python 3.11
+│   ├── pyproject.toml                 # pytest config; pins Python 3.12
 │   └── results/
 │       ├── metrics/                   # committed (small, core evidence)
 │       ├── figures/                   # committed

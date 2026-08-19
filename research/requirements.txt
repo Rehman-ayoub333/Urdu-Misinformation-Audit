@@ -1,11 +1,11 @@
 # Research pipeline dependencies.
 # Every version pinned with `==`, never `>=` (REPRODUCIBILITY.md Section 1).
-# Target interpreter: see DECISION_REGISTER.md M4-2 — DECISION REQUIRED, unresolved.
-# REPRODUCIBILITY.md Section 1 and research/pyproject.toml both say 3.11, but this
-# file cannot be installed on 3.11: numpy==2.5.2 below declares requires_python
-# >=3.12 and ships no cp311 wheel. Observed in practice: local dev 3.13.3, Colab
-# 3.12. The pin is Rehman's to resolve; nothing here has been changed to force it
-# either way (CLAUDE.md rules 3 and 13).
+# Target interpreter: Python 3.12 exactly (research/pyproject.toml,
+# REPRODUCIBILITY.md Section 1). Re-pinned from 3.11 by DECISION_REGISTER.md M4-2
+# (resolved 2026-08-15, option (b)) — 3.11 could never install this file, because
+# numpy==2.5.2 below declares requires_python >=3.12 and ships no cp311 wheel.
+# 3.12 is also what the GPU notebook environment provides (Colab and Kaggle both),
+# so the classical baselines and the transformer runs now share one interpreter.
 #
 # Scope note: this file grows milestone by milestone, listing only what the code in
 # research/src/ actually imports (CLAUDE.md rule 16). At Milestone 1 that is

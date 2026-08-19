@@ -1,6 +1,6 @@
 # Backend Specification
 
-Stack: FastAPI + Pydantic v2, Python 3.11, layered `routers → services → ml` (`DECISION_REGISTER.md` E6/E7). No database (E8). This document is the binding API contract — response shapes here must match `frontend/lib/types.ts` exactly; if either side needs to change, update this document in the same commit (`CLAUDE.md` rule 8).
+Stack: FastAPI + Pydantic v2, Python 3.12 (re-pinned from 3.11 by `DECISION_REGISTER.md` M4-2), layered `routers → services → ml` (`DECISION_REGISTER.md` E6/E7). No database (E8). This document is the binding API contract — response shapes here must match `frontend/lib/types.ts` exactly; if either side needs to change, update this document in the same commit (`CLAUDE.md` rule 8).
 
 ## 1. Layering
 

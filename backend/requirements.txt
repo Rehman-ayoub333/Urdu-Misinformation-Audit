@@ -1,6 +1,7 @@
 # Backend runtime + tooling dependencies.
 # Every version is pinned with `==`, never `>=` (REPRODUCIBILITY.md Section 1).
-# Target interpreter: Python 3.11 exactly (backend/pyproject.toml).
+# Target interpreter: Python 3.12 exactly (backend/pyproject.toml). Supersedes the
+# original 3.11 target per DECISION_REGISTER.md M4-2 (resolved 2026-08-15).
 #
 # Scope note: this file lists only what the code in this repository currently
 # imports. The ML serving stack (torch, transformers, captum) and the request-path

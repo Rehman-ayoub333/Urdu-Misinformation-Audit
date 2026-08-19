@@ -29,9 +29,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # Pinned to 3.11 exactly, matching backend/pyproject.toml's
-          # requires-python and REPRODUCIBILITY.md Section 1.
-          python-version: "3.11"
+          # Pinned to 3.12 exactly, matching backend/pyproject.toml's
+          # requires-python and REPRODUCIBILITY.md Section 1. Supersedes the
+          # original 3.11 pin per DECISION_REGISTER.md M4-2 (resolved 2026-08-15).
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
 

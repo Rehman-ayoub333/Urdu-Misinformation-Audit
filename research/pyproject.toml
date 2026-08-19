@@ -6,9 +6,14 @@
 name = "urdu-misinfo-audit-research"
 version = "0.0.0"
 description = "Dataset acquisition, audit, training and experiment pipeline"
-# Python 3.11 exactly, per REPRODUCIBILITY.md Section 1 — the same version the
-# backend and Colab target. Dependencies are pinned in research/requirements.txt.
-requires-python = "==3.11.*"
+# Python 3.12 exactly, per REPRODUCIBILITY.md Section 1 — the same version the
+# backend and the GPU notebook environment (Colab, Kaggle) target. Dependencies
+# are pinned in research/requirements.txt.
+#
+# Supersedes the original 3.11 pin per DECISION_REGISTER.md M4-2 (resolved
+# 2026-08-15, option (b)): 3.11 was unsatisfiable here, since numpy==2.5.2 in
+# research/requirements.txt requires >=3.12 and publishes no cp311 wheel.
+requires-python = "==3.12.*"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

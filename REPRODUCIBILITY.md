@@ -4,9 +4,9 @@ Expands `MASTER_PROJECT_BLUEPRINT.md` Part 25 into exact, implementable conventi
 
 ## 1. Versions
 
-Python 3.11 pinned (backend `pyproject.toml`, research `requirements.txt`, and CI both target this exact minor version). All Python package versions pinned exactly (`==`, not `>=`) in `backend/requirements.txt` and `research/requirements.txt` — critically `torch`, `transformers`, `captum`, `scikit-learn`, `fastapi`. Node/npm versions pinned via `frontend/package.json`'s `engines` field and a committed lockfile (`package-lock.json`).
+Python 3.12 pinned (backend `pyproject.toml`, research `pyproject.toml`, and CI all target this exact minor version). All Python package versions pinned exactly (`==`, not `>=`) in `backend/requirements.txt` and `research/requirements.txt` — critically `torch`, `transformers`, `captum`, `scikit-learn`, `fastapi`. Node/npm versions pinned via `frontend/package.json`'s `engines` field and a committed lockfile (`package-lock.json`).
 
-> ⚠️ **The 3.11 pin above is currently not met by any environment this project runs in, and `research/requirements.txt` cannot be installed on 3.11 at all** (`numpy==2.5.2` requires ≥3.12). Observed: local dev 3.13.3, Colab 3.12. Logged as **`DECISION_REGISTER.md` M4-2 — DECISION REQUIRED**, awaiting Rehman. The pin is left as written until that is resolved; do not change it, and do not treat the drift as accepted.
+> **This 3.12 pin supersedes the original 3.11 pin, per `DECISION_REGISTER.md` M4-2 (resolved 2026-08-15, option (b)).** 3.11 was unsatisfiable by construction: `numpy==2.5.2`, pinned in `research/requirements.txt`, requires ≥3.12 and ships no cp311 wheel, so the repo's own dependency set could never be installed on the interpreter the repo declared. 3.12 is also the version the GPU notebook environment provides (Colab and Kaggle both), so training and evaluation now share one interpreter with the classical baselines. Milestone 3's four classical experiments (A, B, H, H2) were **re-run on 3.12 and their committed metrics overwritten** as part of that resolution — every number in `research/results/metrics/` therefore traces to a single stated interpreter. Do not reintroduce a 3.11 target anywhere without a new decision row.
 
 ## 2. Seeds
 

@@ -7,14 +7,19 @@
 name = "urdu-misinfo-audit-backend"
 version = "0.0.0"
 description = "FastAPI inference service for the Urdu misinformation audit platform"
-# Python 3.11 exactly, per REPRODUCIBILITY.md Section 1 and DECISION_REGISTER.md E6.
+# Python 3.12 exactly, per REPRODUCIBILITY.md Section 1 and DECISION_REGISTER.md E6.
 # Runtime dependencies are pinned in requirements.txt, which is what both the
 # Dockerfile (DEPLOYMENT_PLAN.md Section 2) and CI install from.
-requires-python = "==3.11.*"
+#
+# Supersedes the original 3.11 pin per DECISION_REGISTER.md M4-2 (resolved
+# 2026-08-15, option (b)). The forcing constraint lives in research/ (numpy>=3.12),
+# not here — backend/ installs and tests clean on either — but REPRODUCIBILITY.md
+# Section 1 pins one interpreter project-wide, so the backend moves with it.
+requires-python = "==3.12.*"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 # Resolve first-party imports from `backend/`, so `app.*` sorts as first-party.
 src = ["."]
 
@@ -30,7 +35,7 @@ select = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 files = ["app", "tests"]
 strict = true
 warn_unused_configs = true
