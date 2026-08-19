@@ -54,7 +54,7 @@ def _can_import(module: str) -> bool:
     """
     try:
         importlib.import_module(module)
-    except Exception:
+    except Exception:  # noqa: BLE001 - a failed import may raise anything at all
         return False
     return True
 
@@ -172,7 +172,7 @@ def deliver_file(path: str | Path) -> str:
 
         try:
             files.download(str(path))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - never abort after an hour of training
             return f"Automatic download failed ({exc}). Get {path} from the Files pane."
         return f"Downloading {path.name} via the browser."
 

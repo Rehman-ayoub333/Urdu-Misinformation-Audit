@@ -144,8 +144,12 @@ urdu-misinfo-audit/
 │   │   ├── evaluation/
 │   │   │   ├── metrics.py
 │   │   │   └── error_analysis.py
-│   │   └── explainability/
-│   │       └── integrated_gradients.py
+│   │   ├── explainability/
+│   │   │   └── integrated_gradients.py
+│   │   └── notebook_env.py            # Colab/Kaggle platform detection for the GPU
+│   │                                  # notebooks (secret store, working dir, file
+│   │                                  # hand-back). stdlib-only: imported before
+│   │                                  # requirements.txt is installed.
 │   ├── configs/
 │   │   ├── data.yaml
 │   │   ├── model_xlmr.yaml
@@ -159,7 +163,8 @@ urdu-misinfo-audit/
 │   ├── scripts/
 │   │   ├── download_data.py
 │   │   ├── run_full_pipeline.sh
-│   │   └── export_model_card.py
+│   │   ├── export_model_card.py
+│   │   └── MILESTONE_4_GPU_HANDOFF.md # Colab/Kaggle run instructions for C and D
 │   ├── tests/                         # data-validation tests (TESTING_STRATEGY.md S1's
 │   │   └── test_raw_data_integrity.py # "Data validation tests" — own pytest target
 │   ├── requirements.txt               # pinned per REPRODUCIBILITY.md Section 1

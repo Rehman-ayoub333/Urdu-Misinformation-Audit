@@ -7,11 +7,12 @@ split and evaluates on val/test, once per seed in `{42, 123, 2026}`
 implementation.
 
 **This module is not run in the authoring environment.** It has no GPU access, so
-its real execution is a Colab handoff (`PROJECT_SPECIFICATION.md` Section 6):
+its real execution is a hosted-GPU handoff (`PROJECT_SPECIFICATION.md` Section 6),
+on Colab or Kaggle:
 Claude Code prepares the runnable pipeline, Rehman executes it and commits the
 resulting metrics and checkpoint references back. What *is* verified here is
 `--dry-run`, which performs real training steps on a tiny slice of real data on
-CPU purely to catch bugs before Colab time is spent on them.
+CPU purely to catch bugs before hosted GPU time is spent on them.
 
 **Sequence length.** `max_length=512`, from config. `MASTER_PROJECT_BLUEPRINT.md`
 Part 8 calls for "full, uncapped" text at training time, but both mBERT and
@@ -51,8 +52,9 @@ _ROOT = Path(__file__).resolve().parents[3]
 CONFIG_DIR = _ROOT / "research" / "configs"
 CHECKPOINT_DIR = _ROOT / "checkpoints"  # gitignored; HF Hub is the real home (E17)
 
-# Environment variables the Colab run needs. Never hardcoded, never committed —
-# same treatment as the Kaggle credential at Milestone 1.
+# Environment variables the hosted-GPU run needs. Never hardcoded, never committed —
+# same treatment as the Kaggle credential at Milestone 1. The notebook reads HF_TOKEN
+# from whichever platform it is on via research/src/notebook_env.py.
 ENV_HF_TOKEN = "HF_TOKEN"
 ENV_HF_STAGING_PREFIX = "HF_STAGING_PREFIX"
 
@@ -99,7 +101,7 @@ def training_step_counts(
 ) -> tuple[int, int, int]:
     """Return (steps_per_epoch, total_optimizer_steps, warmup_steps).
 
-    Pure arithmetic, factored out so the Colab handoff's runtime estimate is
+    Pure arithmetic, factored out so the GPU handoff's runtime estimate is
     computed from the same numbers the scheduler actually uses rather than being
     guessed separately and drifting from it.
     """
@@ -524,8 +526,8 @@ def push_checkpoint(
         ]
         raise RuntimeError(
             f"cannot push checkpoint: {missing} not set in the environment. "
-            "Set them in the Colab session before running "
-            "(see research/scripts/MILESTONE_4_COLAB_HANDOFF.md). Never hardcode them."
+            "Set them in the notebook session before running "
+            "(see research/scripts/MILESTONE_4_GPU_HANDOFF.md). Never hardcode them."
         )
 
     from huggingface_hub import HfApi
@@ -595,7 +597,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Real training steps on a tiny CPU-sized slice, to catch bugs before Colab.",
+        help="Real training steps on a tiny CPU-sized slice, to catch bugs before GPU time.",
     )
     # Default to DryRunSettings' own values; these flags only override when passed,
     # so the fast defaults are not silently undone by argparse.
