@@ -57,10 +57,10 @@
     "macro_f1": 0.3333333333333333
   },
   "run_metadata": {
-    "timestamp_utc": "2026-08-14T16:58:51.020497+00:00",
-    "git_commit": "61782f17a54bafd56565834ded17dbc11a375d70",
+    "timestamp_utc": "2026-08-19T10:22:45.643731+00:00",
+    "git_commit": "ba5a898a0944d08e4580ce79c9c53e2a5ab7e78a",
     "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
-    "python_version": "3.13.3",
+    "python_version": "3.12.11",
     "platform": "Windows-10-10.0.19045-SP0",
     "sklearn_version": "1.9.0",
     "numpy_version": "2.5.2",

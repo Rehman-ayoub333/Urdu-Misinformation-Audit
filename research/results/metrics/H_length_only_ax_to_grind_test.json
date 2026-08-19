@@ -57,10 +57,10 @@
     "macro_f1": 0.3333333333333333
   },
   "run_metadata": {
-    "timestamp_utc": "2026-08-14T08:28:44.646112+00:00",
-    "git_commit": "7b4cd44b47676b87e50383e4f4506314842a3266",
+    "timestamp_utc": "2026-08-19T10:22:29.038539+00:00",
+    "git_commit": "ba5a898a0944d08e4580ce79c9c53e2a5ab7e78a",
     "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
-    "python_version": "3.13.3",
+    "python_version": "3.12.11",
     "platform": "Windows-10-10.0.19045-SP0",
     "sklearn_version": "1.9.0",
     "numpy_version": "2.5.2",
@@ -71,10 +71,7 @@
       "n_words"
     ],
     "uses_text_content": false,
-    "fitted_coefficients_toward_fake": {
-      "n_chars": -1.2906910417169173,
-      "n_words": 2.8719460288940155
-    },
+    "classifier": "logistic_regression",
     "length_relationship_diagnostic": {
       "feature": "n_words",
       "roc_auc_of_raw_feature": 0.4995,
@@ -172,6 +169,10 @@
       ],
       "is_monotonic": false,
       "interpretation": "Non-monotonic: the positive rate is high at BOTH extremes and low in the middle. Rank-based AUC near 0.5 therefore understates the relationship, and a LINEAR model cannot express it — H's macro-F1 is a floor on the available length shortcut, not a measurement of it."
+    },
+    "fitted_coefficients_toward_fake": {
+      "n_chars": -1.2906910417169173,
+      "n_words": 2.8719460288940155
     }
   },
   "config": {
