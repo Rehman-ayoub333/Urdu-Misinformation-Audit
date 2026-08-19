@@ -31,6 +31,17 @@ openpyxl==3.1.5
 # in ten minutes. numpy arrives with pandas but is imported directly, so it is
 # pinned explicitly rather than relied on as a transitive dependency.
 numpy==2.5.2
+# scipy is not imported by any file in research/src/, but it is NOT optional and is
+# NOT lightly-used: `import sklearn.metrics` — which every metrics file this project
+# writes goes through (research/src/evaluation/metrics.py) — pulls in 493 scipy
+# modules, and scikit-learn 1.9.0 declares `scipy>=1.10.0` as a hard runtime
+# requirement. It is pinned here rather than left to transitive resolution for two
+# reasons: REPRODUCIBILITY.md Section 1 requires every version pinned exactly, and a
+# floating scipy is what let Kaggle's preinstalled copy survive alongside a freshly
+# installed numpy (DECISION_REGISTER.md M4-4). 1.18.0 declares `numpy<2.8,>=2.0.0`,
+# so it is compatible with the numpy pin above by the package's own metadata, and the
+# three pins resolve together cleanly on 3.12 (verified).
+scipy==1.18.0
 
 # --- Audit (research/src/data/audit.py) ---
 # blueprint Part 7 item 2 requires subword counts from the ACTUAL XLM-R tokenizer,
