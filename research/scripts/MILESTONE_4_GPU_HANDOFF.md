@@ -19,6 +19,32 @@ from section 2 onward is identical.
 
 ---
 
+## 0. Two habits this notebook now enforces
+
+Both were added after Milestone 4 lost a run's results and needed a same-day
+recovery (`DECISION_REGISTER.md` M4-6). They are the default now, not something to
+remember.
+
+**Durability first.** Every metrics file is pushed to
+`<HF_STAGING_PREFIX>/urdu-misinfo-results-staging` the moment it is written — per
+seed, per split — never batched to the end. The packaging cell then verifies with
+the Hub that everything arrived and **stops the notebook if it cannot confirm**. The
+session disk is never the only copy, not even briefly.
+
+**One cell to restore state, and a hard guard on expensive cells.** Section 0 is a
+single idempotent cell that re-establishes `REPO_DIR`, `HF_STAGING_PREFIX`,
+`os.environ["HF_TOKEN"]` and `sys.path` from scratch, re-syncing the repo if needed.
+After any kernel restart that is the **only** cell to re-run — not five, in the right
+order. It is safe to run repeatedly and at any point.
+
+It also sets `CONFIRM_TRAIN = False`. The two cells that spend real GPU time check
+that flag and print a clear "SKIPPED" message instead of running, so an accidental
+**Run All** or a misclick cannot start hours of training. To train deliberately, put
+`CONFIRM_TRAIN = True` in a cell of your own and re-run the training cell. Restoring
+state resets it to `False` — recovering from a crash must never re-arm training.
+
+---
+
 ## 1. Before you open the notebook
 
 ### Secrets you must create
