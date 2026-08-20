@@ -1,0 +1,201 @@
+{
+"experiment_id": "C",
+"model": "bert-base-multilingual-cased",
+"dataset": "ax_to_grind",
+"split": "val",
+"seed": 123,
+"n_examples": 1372,
+"metrics": {
+"accuracy": 0.9110787172011662,
+"macro_f1": 0.9109508001361935,
+"weighted_f1": 0.9109508001361935,
+"roc_auc": 0.9687003289445725,
+"pr_auc": 0.9718072275844462
+},
+"confusion_matrix": {
+"labels": [
+"fake",
+"real"
+],
+"matrix": [
+[
+599,
+87
+],
+[
+35,
+651
+]
+],
+"note": "rows = true label, columns = predicted label, in `labels` order"
+},
+"per_class": {
+"fake": {
+"precision": 0.944794952681388,
+"recall": 0.8731778425655977,
+"f1": 0.9075757575757576,
+"support": 686
+},
+"real": {
+"precision": 0.8821138211382114,
+"recall": 0.9489795918367347,
+"f1": 0.9143258426966292,
+"support": 686
+}
+},
+"prediction_collapse": {
+"predicted_counts": {
+"fake": 634,
+"real": 738
+},
+"dominant_class_share": 0.5379,
+"is_collapsed": false
+},
+"majority_class_baseline": {
+"majority_class": "fake",
+"accuracy": 0.5,
+"macro_f1": 0.3333333333333333
+},
+"run_metadata": {
+"timestamp_utc": "2026-08-20T05:24:39.899445+00:00",
+"git_commit": "aefd2f913e82f70e4ccd6c460800316df6f0b7fd",
+"dataset_manifest_sha256_prefix": "57d1f656f18c9ba2",
+"python_version": "3.12.13",
+"platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+"sklearn_version": "1.9.0",
+"numpy_version": "2.5.2",
+"n_train": 6405,
+"train_split": "ax_to_grind_train",
+"epochs": 3,
+"effective_batch_size": 16,
+"fp16": true,
+"truncation": {
+"max_length": 512,
+"n_examples": 6405,
+"n_truncated": 424,
+"pct_truncated": 6.62,
+"truncated_by_label": {
+"fake": 424
+},
+"max_observed_tokens": 1919
+},
+"train_runtime_seconds": null,
+"train_loss": null,
+"hardware": {
+"torch_version": "2.13.0+cu130",
+"cuda_available": true,
+"device": "cuda",
+"gpu_name": "Tesla T4",
+"gpu_memory_gb": 14.56,
+"cuda_version": "13.0"
+},
+"evaluation_only_recovery": {
+"recovered": true,
+"reason": "Metrics lost with the Kaggle session's working directory before download (DECISION_REGISTER.md M4-6). Re-scored from the pushed checkpoint, which load_best_model_at_end makes the exact model that produced the original numbers.",
+"checkpoint_repo_id": "RehmanAyoub/urdu-misinfo-mbert-staging",
+"checkpoint_revision_branch": "seed-123",
+"checkpoint_revision_sha": "dcb0d50af1d8981ce46558384b6806f210a06302",
+"unavailable_fields": [
+"train_runtime_seconds",
+"train_loss",
+"training_hardware"
+],
+"hardware_is": "evaluation host, not the training host"
+},
+"dry_run": false
+},
+"config": {
+"data": {
+"version": 1,
+"datasets": {
+"ax_to_grind": {
+"role": "primary_training_set",
+"source_file": "research/data/raw/ax_to_grind/Combined .csv",
+"splits": {
+"train": "research/data/splits/ax_to_grind_train.txt",
+"val": "research/data/splits/ax_to_grind_val.txt",
+"test": "research/data/splits/ax_to_grind_test.txt"
+}
+},
+"notri_fact": {
+"role": "cross_dataset_test_set",
+"source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+"splits": {
+"holdout": "research/data/splits/notri_fact_holdout.txt"
+},
+"train_on": false
+}
+},
+"labels": {
+"positive": "fake",
+"negative": "real",
+"order": [
+"fake",
+"real"
+]
+},
+"preprocessing": {
+"tier": 2,
+"cap_length": false,
+"normalise_numbers": false
+},
+"deduplication": {
+"applied_before_split": true,
+"report": "research/data/audit/duplication_report.json"
+}
+},
+"model": {
+"version": 1,
+"model": {
+"name": "bert-base-multilingual-cased",
+"hf_model_id": "bert-base-multilingual-cased",
+"experiment_id": "C",
+"num_labels": 2
+},
+"tokenizer": {
+"max_length": 512,
+"truncation": true,
+"padding": "max_length"
+},
+"training": {
+"seeds": [
+42,
+123,
+2026
+],
+"learning_rate": 2e-05,
+"per_device_train_batch_size": 16,
+"per_device_eval_batch_size": 32,
+"gradient_accumulation_steps": 1,
+"num_train_epochs": 3,
+"optimizer": "adamw_torch",
+"weight_decay": 0.01,
+"adam_epsilon": 1e-08,
+"max_grad_norm": 1.0,
+"warmup_ratio": 0.1,
+"lr_scheduler_type": "linear",
+"fp16": true,
+"eval_strategy": "epoch",
+"save_strategy": "epoch",
+"load_best_model_at_end": true,
+"metric_for_best_model": "macro_f1",
+"greater_is_better": true,
+"save_total_limit": 1,
+"logging_steps": 50,
+"dataloader_num_workers": 2
+},
+"evaluation": {
+"splits_evaluated": [
+"val",
+"test"
+],
+"primary_metric": "macro_f1"
+},
+"checkpoint_push": {
+"enabled": true,
+"staging_repo_suffix": "urdu-misinfo-mbert-staging",
+"private": true
+}
+}
+}
+}
