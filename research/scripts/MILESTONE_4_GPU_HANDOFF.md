@@ -90,6 +90,13 @@ These are **staging**, deliberately not the production `MODEL_REPO_ID`. Promotio
 production is a separate decision at Milestone 9, made on defensibility rather than
 raw in-domain F1 (`EXPERIMENT_PLAN.md` Section 7).
 
+Plus one **dataset** repo holding the metrics, written to as each seed finishes so
+the results are never only on the session disk (`DECISION_REGISTER.md` M4-6):
+
+```
+<HF_STAGING_PREFIX>/urdu-misinfo-results-staging   milestone4/metrics/*.json
+```
+
 Plus 12 metrics files in `research/results/metrics/`:
 
 ```
@@ -165,6 +172,31 @@ bottom. It:
 **To open it on Kaggle:** New Notebook → File → Import Notebook → GitHub (or upload
 the `.ipynb`). On Colab: `File → Open notebook → GitHub → this repo`.
 
+### If the checkpoints exist but the metrics are gone (recovery mode)
+
+Section **5b** of the notebook. Skip it on a normal run.
+
+If a session is lost after training completed but before the metrics were secured,
+you do **not** need to retrain. The pushed checkpoints are the exact models that
+produced those numbers (`load_best_model_at_end` means the best-epoch model is what
+got pushed), and scoring is deterministic, so re-scoring reproduces them.
+
+1. **Step 0 — inventory.** CPU, seconds, no GPU cost. Confirms all six seed branches
+   carry config, weights *and* tokenizer. Read its output before going further: if it
+   reports some seeds missing, only those need retraining.
+2. **Step 1 — re-score.** Downloads each checkpoint and re-evaluates val/test.
+   Minutes, not hours — the compute is a forward pass over ~2,750 rows per seed; the
+   wall-clock is mostly the ~5.4 GB of downloads.
+
+Two fields cannot be recovered this way and are written as `null` rather than
+guessed: `train_runtime_seconds` and `train_loss`. Neither feeds RQ1, RQ2 or RQ3.
+Recovered files declare themselves in `run_metadata.evaluation_only_recovery`, and
+the summary table flags them in a `recov` column.
+
+**Do not retrain to recover metrics.** GPU training is not bit-deterministic, so a
+retrain produces different weights and would overwrite the seed branches, orphaning
+the revision SHAs already recorded — leaving numbers that match no artefact you hold.
+
 ### If a fix has landed since you opened the notebook
 
 **Re-open the notebook from GitHub. Do not just restart the session.**
@@ -185,8 +217,27 @@ message if yours is older, so you will not have to diagnose this by hand again.
 
 ## 5. What to bring back
 
-1. **The 12 metrics JSON files** from `research/results/metrics/` (the last step zips
-   them — on Kaggle, collect the zip from the session's **Output** tab).
+> ### ⚠️ The run is not done until the results are on Hugging Face
+>
+> **A Kaggle draft session's working directory is not storage.** On 2026-08-19 all
+> six runs completed, all six checkpoints pushed successfully, the metrics zip was
+> packaged — and then the Output-tab download silently failed (Kaggle was returning
+> 503s), the session went idle, the tab was reloaded, and `/kaggle/working` came
+> back **empty**. Every metrics file was lost. The checkpoints survived only because
+> they had been pushed to HF as each seed finished. `DECISION_REGISTER.md` M4-6.
+>
+> The notebook now pushes each seed's metrics to
+> `<HF_STAGING_PREFIX>/urdu-misinfo-results-staging` the moment they are written,
+> and the packaging cell **stops the notebook** if it cannot confirm with the Hub
+> that every file arrived. If that cell raises: **do not close the session.** Re-run
+> it. The metrics still exist in `research/results/metrics/` at that point, but only
+> there — which is exactly the state that lost them last time.
+>
+> Treat the Output-tab zip as a convenience copy, never as the copy.
+
+1. **The 12 metrics JSON files.** They should already be on HF in the results repo
+   above — check there first; that is the durable copy. The zip from the session's
+   **Output** tab is a convenience.
 2. **The staging repo IDs and, for each seed, the revision SHA** printed in the
    summary table. `REPRODUCIBILITY.md` Section 6 requires a checkpoint be identified
    by repo ID **plus** revision, not repo ID alone — a branch name moves, a SHA does not.

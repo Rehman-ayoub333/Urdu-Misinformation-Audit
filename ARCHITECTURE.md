@@ -134,6 +134,8 @@ urdu-misinfo-audit/
 │   │   ├── models/
 │   │   │   ├── classical.py
 │   │   │   ├── transformer.py
+│   │   │   ├── evaluate_checkpoint.py  # eval-only recovery: re-score a pushed
+│   │   │   │                           # checkpoint without retraining (M4-6)
 │   │   │   └── length_baseline.py
 │   │   ├── experiments/
 │   │   │   ├── run_in_domain.py
@@ -143,6 +145,8 @@ urdu-misinfo-audit/
 │   │   │   └── run_all.py
 │   │   ├── evaluation/
 │   │   │   ├── metrics.py
+│   │   │   ├── results_push.py        # metrics -> HF as each seed finishes, so a
+│   │   │   │                          # lost session cannot lose results (M4-6)
 │   │   │   └── error_analysis.py
 │   │   ├── explainability/
 │   │   │   └── integrated_gradients.py
@@ -164,6 +168,9 @@ urdu-misinfo-audit/
 │   │   ├── download_data.py
 │   │   ├── run_full_pipeline.sh
 │   │   ├── export_model_card.py
+│   │   ├── check_gpu_env.py           # environment gate, run as a subprocess (M4-5)
+│   │   ├── diagnose_numpy_env.py      # read-only numpy environment diagnostic
+│   │   ├── inventory_staging_checkpoints.py  # verify pushed checkpoints (M4-6 step 0)
 │   │   └── MILESTONE_4_GPU_HANDOFF.md # Colab/Kaggle run instructions for C and D
 │   ├── tests/                         # data-validation tests (TESTING_STRATEGY.md S1's
 │   │   └── test_raw_data_integrity.py # "Data validation tests" — own pytest target
