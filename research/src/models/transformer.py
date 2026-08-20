@@ -47,6 +47,7 @@ from research.src.evaluation.metrics import (
     validate_metrics_record,
     write_metrics,
 )
+from research.src.evaluation.results_push import push_result_files
 
 _ROOT = Path(__file__).resolve().parents[3]
 CONFIG_DIR = _ROOT / "research" / "configs"
@@ -585,6 +586,16 @@ def run_experiment(
         )
         result["push"] = push_info
         print(f"  checkpoint: {push_info}")
+
+        # M4-6: get the metrics off this machine NOW, seed by seed — the same
+        # guarantee the checkpoint above has had all along. Milestone 4's first run
+        # lost every metrics file precisely because they were batched into a single
+        # zip at the very end and the session's disk did not outlive the run, while
+        # all six checkpoints survived. Never fatal: a failed upload must not
+        # destroy a completed training run, so this reports and continues.
+        result["results_push"] = push_result_files(
+            result["metrics_files"], dry_run=bool(dry_run) or not should_push
+        )
         results.append(result)
 
     return results
