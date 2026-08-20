@@ -45,6 +45,11 @@ Milestones are sequential and gated — do not start milestone N+1 until milesto
 
 ## Milestone 5 — Cross-dataset, shortcut, mitigation, explainability, error analysis
 **Objective:** experiments F, G, I, N, O complete (REQUIRED set finished).
+
+**Status (2026-08-20):**
+- **F — COMPLETE**, all four models, Ax-to-Grind → Notri-Fact. Classical run locally; transformers scored on Kaggle from the Milestone 4 staging checkpoints (inference only, 3 seeds each). Zero-shot macro-F1: A 0.4948, B 0.4787, **C (mBERT) 0.3340 ± 0.0003, D (XLM-R) 0.3393 ± 0.0031** — both transformers at the majority-class floor with >99% dominant-class share (`is_collapsed: true`), against in-domain ~0.921/0.927. RQ2's headline: the transformers generalise *better* in-domain and collapse *harder* under transfer than the classical baselines.
+- **G — DEFERRED, not blocked by code.** Resolved in principle as `DECISION_REGISTER.md` M5-1 (option (a), "full G later"): needs a Notri-Fact train/test split, a Part 9 amendment, and 6 further transformer training runs — a second GPU session. Until it lands, F measures a drop but does **not** evidence the *asymmetry* `MASTER_PROJECT_BLUEPRINT.md` Part 13 hypothesises, so this milestone cannot be called complete.
+- **I, N, O — not started.** O and the shared error-analysis sample need no GPU; I and Q both need a fresh XLM-R retrain.
 **Files:** `run_cross_dataset.py`, `run_shortcut_analysis.py` (length-ablation mode), `research/src/explainability/integrated_gradients.py`, `research/src/evaluation/error_analysis.py`.
 **Tasks:** per `EXPERIMENT_PLAN.md` Section 2 steps 4–7, strictly after Milestone 2's dedup gate is confirmed passed.
 **Tests:** IG completeness-axiom sanity check; error-analysis sampling reproducibility test (fixed seed → same sample).

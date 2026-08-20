@@ -1,0 +1,205 @@
+{
+  "experiment_id": "F",
+  "model": "xlm-roberta-base",
+  "dataset": "notri_fact",
+  "split": "holdout",
+  "seed": 2026,
+  "n_examples": 13355,
+  "metrics": {
+    "accuracy": 0.501909397229502,
+    "macro_f1": 0.34268335041833287,
+    "weighted_f1": 0.34343430241150896,
+    "roc_auc": 0.506505001730705,
+    "pr_auc": 0.4916049236453246
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        6638,
+        55
+      ],
+      [
+        6597,
+        65
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.5015489233094069,
+      "recall": 0.991782459285821,
+      "f1": 0.6661983139301485,
+      "support": 6693
+    },
+    "real": {
+      "precision": 0.5416666666666666,
+      "recall": 0.009756829780846592,
+      "f1": 0.019168386906517253,
+      "support": 6662
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 13235,
+      "real": 120
+    },
+    "dominant_class_share": 0.991,
+    "is_collapsed": true
+  },
+  "majority_class_baseline": {
+    "majority_class": "fake",
+    "accuracy": 0.5011606140022463,
+    "macro_f1": 0.3338487629688747
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-20T14:51:27.382930+00:00",
+    "git_commit": "36f7ad5f00a387991e372b168650d49d19d9af77",
+    "dataset_manifest_sha256_prefix": "57d1f656f18c9ba2",
+    "python_version": "3.12.13",
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "checkpoint": {
+      "repo_id": "RehmanAyoub/urdu-misinfo-xlmr-staging",
+      "revision_branch": "seed-2026",
+      "revision_sha": "f8798be503138debefddaa092f6e88f495de00f7"
+    },
+    "inference_only": true,
+    "truncation": {
+      "max_length": 512,
+      "n_examples": 13355,
+      "n_truncated": 113,
+      "pct_truncated": 0.846,
+      "truncated_by_label": {
+        "real": 91,
+        "fake": 22
+      },
+      "max_observed_tokens": 2217
+    },
+    "fp16": true,
+    "hardware": {
+      "torch_version": "2.13.0+cu130",
+      "cuda_available": true,
+      "device": "cuda",
+      "gpu_name": "Tesla T4",
+      "gpu_memory_gb": 14.56,
+      "cuda_version": "13.0"
+    },
+    "dry_run": false,
+    "base_experiment_id": "D",
+    "transfer": {
+      "direction_id": "F",
+      "description": "train Ax-to-Grind -> test Notri-Fact (zero-shot)",
+      "source_dataset": "ax_to_grind",
+      "source_split": "train",
+      "target_dataset": "notri_fact",
+      "target_split": "holdout",
+      "zero_shot": true,
+      "target_used_for_training": false,
+      "target_used_for_tuning": false,
+      "dedup_gate": {
+        "cross_dataset_near_duplicate_pairs": 0,
+        "source": "research/data/audit/duplication_report.json"
+      }
+    }
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "version": 1,
+      "model": {
+        "name": "xlm-roberta-base",
+        "hf_model_id": "xlm-roberta-base",
+        "experiment_id": "D",
+        "num_labels": 2
+      },
+      "tokenizer": {
+        "max_length": 512,
+        "truncation": true,
+        "padding": "max_length"
+      },
+      "training": {
+        "seeds": [
+          42,
+          123,
+          2026
+        ],
+        "learning_rate": 2e-05,
+        "per_device_train_batch_size": 16,
+        "per_device_eval_batch_size": 32,
+        "gradient_accumulation_steps": 1,
+        "num_train_epochs": 3,
+        "optimizer": "adamw_torch",
+        "weight_decay": 0.01,
+        "adam_epsilon": 1e-08,
+        "max_grad_norm": 1.0,
+        "warmup_ratio": 0.1,
+        "lr_scheduler_type": "linear",
+        "fp16": true,
+        "eval_strategy": "epoch",
+        "save_strategy": "epoch",
+        "load_best_model_at_end": true,
+        "metric_for_best_model": "macro_f1",
+        "greater_is_better": true,
+        "save_total_limit": 1,
+        "logging_steps": 50,
+        "dataloader_num_workers": 2
+      },
+      "evaluation": {
+        "splits_evaluated": [
+          "val",
+          "test"
+        ],
+        "primary_metric": "macro_f1"
+      },
+      "checkpoint_push": {
+        "enabled": true,
+        "staging_repo_suffix": "urdu-misinfo-xlmr-staging",
+        "private": true
+      }
+    }
+  }
+}

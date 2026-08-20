@@ -167,6 +167,26 @@ def _committed_metrics_files() -> list:
     return sorted(METRICS_DIR.glob("*.json")) if METRICS_DIR.exists() else []
 
 
+# Cross-dataset transfer (F, G) is scored on a corpus the model never trained on.
+# A collapse there is the PHENOMENON UNDER STUDY, not a broken run — RQ2 predicts
+# it and Haroon (2026) reported it at 99.7% — so the in-domain "not degenerate"
+# acceptance criterion below cannot apply to these files. They get their own,
+# weaker-but-still-real soundness check instead.
+_TRANSFER_EXPERIMENTS = ("F", "G")
+
+
+def _is_transfer(path) -> bool:
+    return path.name.split("_")[0] in _TRANSFER_EXPERIMENTS
+
+
+def _in_domain_metrics_files() -> list:
+    return [p for p in _committed_metrics_files() if not _is_transfer(p)]
+
+
+def _transfer_metrics_files() -> list:
+    return [p for p in _committed_metrics_files() if _is_transfer(p)]
+
+
 def test_metrics_directory_contains_results() -> None:
     """ROADMAP.md Milestone 3: A_*, B_*, H_* must exist with real numbers.
 
@@ -265,11 +285,17 @@ def test_committed_metrics_file_conforms_to_contract(path) -> None:
 
 
 @pytest.mark.parametrize(
-    "path", _committed_metrics_files(), ids=lambda p: p.name
+    "path", _in_domain_metrics_files(), ids=lambda p: p.name
 )
 def test_committed_metrics_are_not_degenerate(path) -> None:
     """Acceptance criterion: meaningfully above the majority-class floor, and not
-    a collapsed all-one-class predictor."""
+    a collapsed all-one-class predictor.
+
+    IN-DOMAIN ONLY. A model that collapses on the corpus it was trained on is a
+    broken run, and this catches that. A model that collapses on a corpus it has
+    never seen is Experiment F's actual result, so transfer files are excluded —
+    see `test_transfer_metrics_are_sound` for what is asserted about them instead.
+    """
     record = json.loads(path.read_text(encoding="utf-8"))
     macro_f1 = record["metrics"]["macro_f1"]
     floor = record["majority_class_baseline"]["macro_f1"]
@@ -281,3 +307,46 @@ def test_committed_metrics_are_not_degenerate(path) -> None:
     assert not record["prediction_collapse"]["is_collapsed"], (
         f"{path.name}: degenerate all-one-class predictor"
     )
+
+
+@pytest.mark.parametrize("path", _transfer_metrics_files(), ids=lambda p: p.name)
+def test_transfer_metrics_are_sound(path) -> None:
+    """Cross-dataset files may collapse; they may not be malformed or impossible.
+
+    Dropping the in-domain criterion for F/G would otherwise leave transfer
+    results with no guard at all, so this asserts what must hold regardless of how
+    badly a model transfers:
+
+    * macro-F1 not FAR below the majority-class floor. Note it may sit
+      *marginally* below and still be correct: a near-pure collapse predicts the
+      minority class a handful of times and gets most of those wrong, which drags
+      the macro average a hair under a perfectly pure one-class baseline. Measured
+      here: mBERT seed-2026 scores 0.33365 against a 0.33385 floor, predicting
+      `fake` 13,331 times and `real` 24. What would signal a genuinely broken run
+      — inverted labels, a misaligned frame — is scoring far below, so the
+      tolerance is 0.05, mirroring the in-domain criterion's margin;
+    * the collapse flag agrees with the measured dominant-class share, so a
+      collapse can never be recorded without the evidence for it;
+    * the run declares itself zero-shot and declares the target untrained-on,
+      which is the property the whole RQ2 claim rests on.
+    """
+    record = json.loads(path.read_text(encoding="utf-8"))
+    macro_f1 = record["metrics"]["macro_f1"]
+    floor = record["majority_class_baseline"]["macro_f1"]
+    collapse = record["prediction_collapse"]
+
+    assert macro_f1 >= floor - 0.05, (
+        f"{path.name}: macro-F1 {macro_f1:.4f} is far below the majority-class "
+        f"floor {floor:.4f} — substantially worse than always predicting one "
+        "class, which indicates a broken run (inverted labels, misaligned frame) "
+        "rather than a transfer failure"
+    )
+    assert collapse["is_collapsed"] == (collapse["dominant_class_share"] >= 0.95), (
+        f"{path.name}: is_collapsed={collapse['is_collapsed']} disagrees with "
+        f"dominant_class_share={collapse['dominant_class_share']}"
+    )
+
+    transfer = record["run_metadata"]["transfer"]
+    assert transfer["zero_shot"] is True, path.name
+    assert transfer["target_used_for_training"] is False, path.name
+    assert transfer["source_dataset"] != transfer["target_dataset"], path.name
