@@ -25,6 +25,7 @@ from research.src.evaluation.metrics import (
     build_metrics_record,
     validate_metrics_record,
     write_metrics,
+    write_predictions,
 )
 from research.src.models.classical import build_pipeline, fit_predict
 
@@ -98,6 +99,17 @@ def run_classical(
 
         filename = f"{experiment_id}_{experiment['name']}_{dataset}_{split}.json"
         written.append(write_metrics(record, filename))
+
+        # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2. No-ops on val;
+        # the qualifying-splits rule lives in metrics.py so it cannot drift.
+        write_predictions(
+            metrics_filename=filename,
+            split=split,
+            row_ids=evaluation["row_id"].tolist(),
+            y_true=evaluation["label"].tolist(),
+            y_pred=predictions,
+            scores=scores,
+        )
 
         metrics = record["metrics"]
         collapse = record["prediction_collapse"]

@@ -23,9 +23,10 @@ import json
 import platform
 import subprocess
 import sys
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 import sklearn
@@ -251,6 +252,89 @@ def write_metrics(record: dict[str, Any], filename: str, destination: Path | Non
     target = (destination or METRICS_DIR) / filename
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
+    return target
+
+
+# --- Per-example predictions (REPRODUCIBILITY.md Section 6) ---------------------
+#
+# Section 6 requires the FULL per-example predictions be saved "for the test and
+# cross-dataset test sets specifically ... so any derived statistic can be
+# recomputed without rerunning inference". Only aggregates were ever written, which
+# is what blocked Milestone 5's error-analysis sample (DECISION_REGISTER.md M5-2).
+#
+# The qualifying splits live here rather than in each runner so a new experiment
+# cannot quietly skip them: "test" is the in-domain held-out split, "holdout" is
+# Notri-Fact's, which is the cross-dataset test set. Validation splits are
+# deliberately excluded — Section 6 scopes the requirement to test sets, and val
+# predictions are used for model selection, not for reported findings.
+PREDICTION_SPLITS = ("test", "holdout")
+
+
+def should_persist_predictions(split: str) -> bool:
+    return split in PREDICTION_SPLITS
+
+
+def predictions_filename(metrics_filename: str) -> str:
+    """`X.json` -> `X.predictions.jsonl`, so the pair is obvious on disk."""
+    stem = metrics_filename.removesuffix(".json")
+    return f"{stem}.predictions.jsonl"
+
+
+def write_predictions(
+    *,
+    metrics_filename: str,
+    split: str,
+    row_ids: Sequence[str],
+    y_true: Sequence[str],
+    y_pred: Sequence[str],
+    scores: Sequence[float] | None = None,
+    destination: Path | None = None,
+) -> Path | None:
+    """Persist row-level predictions beside a metrics file. No-op for other splits.
+
+    JSONL rather than CSV or parquet: one self-describing JSON object per line, so
+    it diffs readably in git, streams without loading the whole file, and needs no
+    dependency beyond the standard library (parquet would mean adding pyarrow,
+    which `CLAUDE.md` rule 16 does not permit without a stated need).
+
+    Scores are written at FULL precision, not rounded — the point of Section 6 is
+    that a different metric can be recomputed later, and rounding would silently
+    cap how faithfully that can be done.
+
+    `score_positive` is P(positive class), where the positive label is recorded in
+    the sibling metrics JSON at `config.data.labels.positive` — it is not repeated
+    on every row.
+    """
+    if not should_persist_predictions(split):
+        return None
+
+    row_ids, y_true, y_pred = list(row_ids), list(y_true), list(y_pred)
+    if not (len(row_ids) == len(y_true) == len(y_pred)):
+        raise ValueError(
+            f"predictions length mismatch for {metrics_filename}: "
+            f"{len(row_ids)} row_ids, {len(y_true)} y_true, {len(y_pred)} y_pred"
+        )
+    score_list = list(scores) if scores is not None else None
+    if score_list is not None and len(score_list) != len(row_ids):
+        raise ValueError(
+            f"predictions length mismatch for {metrics_filename}: "
+            f"{len(score_list)} scores vs {len(row_ids)} rows"
+        )
+
+    target = (destination or METRICS_DIR) / predictions_filename(metrics_filename)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w", encoding="utf-8", newline="\n") as handle:
+        for index, row_id in enumerate(row_ids):
+            row: dict[str, Any] = {
+                # Traceable back to the committed split index, so the source text is
+                # recoverable via research/src/data/split.py without guessing.
+                "row_id": row_id,
+                "y_true": y_true[index],
+                "y_pred": y_pred[index],
+            }
+            if score_list is not None:
+                row["score_positive"] = float(score_list[index])
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
     return target
 
 

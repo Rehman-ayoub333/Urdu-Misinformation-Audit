@@ -56,6 +56,7 @@ from research.src.evaluation.metrics import (
     build_metrics_record,
     validate_metrics_record,
     write_metrics,
+    write_predictions,
 )
 from research.src.models.classical import build_pipeline, fit_predict
 
@@ -172,6 +173,18 @@ def run_classical_transfer(
         f"_{direction['target_dataset']}_{direction['target_split']}.json"
     )
     path = write_metrics(record, filename)
+
+    # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2. The target split of
+    # a transfer run IS the cross-dataset test set, so this always writes.
+    write_predictions(
+        metrics_filename=filename,
+        split=direction["target_split"],
+        row_ids=target["row_id"].tolist(),
+        y_true=target["label"].tolist(),
+        y_pred=list(predictions),
+        scores=list(scores) if scores is not None else None,
+    )
+
     print(
         f"  [{direction_id}/{base_experiment_id}] {experiment['name']}: "
         f"macro-F1={record['metrics']['macro_f1']:.4f} "

@@ -46,6 +46,7 @@ from research.src.evaluation.metrics import (
     build_metrics_record,
     validate_metrics_record,
     write_metrics,
+    write_predictions,
 )
 from research.src.evaluation.results_push import push_result_files
 
@@ -447,6 +448,16 @@ def train_one_seed(
             filename = f"{experiment_id}_{model_config['model']['name']}_ax_to_grind_{split}_seed{seed}.json"
             path = write_metrics(record, filename)
             written.append(str(path))
+
+            # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2.
+            write_predictions(
+                metrics_filename=filename,
+                split=split,
+                row_ids=split_frames[split]["row_id"].tolist(),
+                y_true=y_true,
+                y_pred=y_pred,
+                scores=scores,
+            )
             print(
                 f"  {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
                 f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"

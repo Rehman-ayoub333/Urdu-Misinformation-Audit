@@ -47,6 +47,7 @@ from research.src.evaluation.metrics import (
     build_metrics_record,
     validate_metrics_record,
     write_metrics,
+    write_predictions,
 )
 from research.src.evaluation.results_push import push_result_files
 
@@ -260,6 +261,18 @@ def evaluate_on_frame(
         f"{experiment_id}_{model_config['model']['name']}_{dataset}_{split}_seed{seed}.json"
     )
     path = write_metrics(record, filename)
+
+    # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2. This is the path
+    # the Kaggle backfill of C, D and F's transformer half will run through.
+    write_predictions(
+        metrics_filename=filename,
+        split=split,
+        row_ids=frame["row_id"].tolist(),
+        y_true=frame["label"].tolist(),
+        y_pred=y_pred,
+        scores=scores,
+    )
+
     print(
         f"  {dataset}/{split}: macro-F1={record['metrics']['macro_f1']:.4f} "
         f"acc={record['metrics']['accuracy']:.4f} "

@@ -28,7 +28,16 @@ Training hardware documented explicitly in `research/results/metrics/` run metad
 
 ## 6. Saved artifacts
 
-Every experiment saves: the metrics JSON (accuracy, macro-F1, etc.), the config used, and — for the test and cross-dataset test sets specifically — the **full per-example predictions** (not just aggregate metrics), so any derived statistic (e.g., a different metric someone wants to compute later, or a finer-grained length-bucket breakdown) can be recomputed without rerunning inference. Model checkpoints themselves are not stored in git (too large) — they live on the HF Model Hub (`DEPLOYMENT_PLAN.md` Section 3), referenced by repo ID + revision from the metrics metadata.
+Every experiment saves: the metrics JSON (accuracy, macro-F1, etc.), the config used, and — for the test and cross-dataset test sets specifically — the **full per-example predictions** (not just aggregate metrics), so any derived statistic (e.g., a different metric someone wants to compute later, or a finer-grained length-bucket breakdown) can be recomputed without rerunning inference.
+
+**Format of the per-example predictions** (added `DECISION_REGISTER.md` M5-2 — this requirement was stated here from the start but never specified or implemented, and the gap surfaced when Milestone 5's error-analysis sample needed it):
+
+- **One JSONL file per metrics file**, named by replacing `.json` with `.predictions.jsonl` — e.g. `A_tfidf_logreg_ax_to_grind_test.json` is accompanied by `A_tfidf_logreg_ax_to_grind_test.predictions.jsonl`. The pair is therefore obvious on disk without a lookup table.
+- **JSONL, not CSV or parquet**: one self-describing object per line, so it diffs readably in git and streams without loading the whole file, and it needs no dependency beyond the standard library (parquet would mean adding `pyarrow`, which `CLAUDE.md` rule 16 does not permit without a stated need).
+- **Fields per row:** `row_id` (the identifier from the committed split index, so the source text is recoverable via `research/src/data/split.py` rather than by position), `y_true`, `y_pred`, and `score_positive` where the model produces one. `score_positive` is P(positive class); the positive label is *not* repeated per row — it is recorded once in the sibling metrics JSON at `config.data.labels.positive`.
+- **Scores are written at full precision, never rounded.** Rounding would silently cap how faithfully a different metric can be recomputed later, which is the entire purpose of keeping these.
+- **Which splits:** `test` and `holdout` only, defined once as `PREDICTION_SPLITS` in `research/src/evaluation/metrics.py` so an experiment runner cannot quietly skip them. Validation splits are deliberately excluded — this section scopes the requirement to test sets, and val predictions drive model selection rather than reported findings.
+- **`LinearSVC` has no probabilities**, so `score_positive` is absent for experiment B rather than fabricated. Model checkpoints themselves are not stored in git (too large) — they live on the HF Model Hub (`DEPLOYMENT_PLAN.md` Section 3), referenced by repo ID + revision from the metrics metadata.
 
 ## 7. Notebooks
 
