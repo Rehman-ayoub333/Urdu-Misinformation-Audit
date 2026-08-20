@@ -12,6 +12,13 @@ three mechanical ways, all handled by `research/src/notebook_env.py`. Section 1.
 below is the only part you read differently depending on which you use; everything
 from section 2 onward is identical.
 
+> **Looking for Experiment F (cross-dataset zero-shot)?** That is a different job —
+> inference only, both corpora, an extra Kaggle credential — and has its own doc and
+> notebook: `research/scripts/MILESTONE_5_GPU_HANDOFF.md` and
+> `research/notebooks/05_cross_dataset_eval.ipynb`. This doc covers Milestone 4's
+> **training** runs only. The environment cells are shared verbatim between the two
+> notebooks so they cannot drift.
+
 > **Current status: Kaggle.** Colab's free GPU quota was exhausted on 2026-08-19
 > (a usage-limit error, not a bug — confirmed live), so this run moves to Kaggle.
 > The Colab path is kept working and documented, not deleted, since the quota

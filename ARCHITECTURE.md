@@ -163,7 +163,10 @@ urdu-misinfo-audit/
 │   ├── notebooks/                     # exploration only, per REPRODUCIBILITY.md
 │   │   ├── 01_dataset_exploration.ipynb
 │   │   ├── 02_audit_walkthrough.ipynb
-│   │   └── 03_explainability_examples.ipynb
+│   │   ├── 03_explainability_examples.ipynb
+│   │   ├── 04_transformer_training.ipynb  # hosted-GPU handoff: trains C and D
+│   │   └── 05_cross_dataset_eval.ipynb    # hosted-GPU handoff: Experiment F,
+│   │                                      # inference only, never trains
 │   ├── scripts/
 │   │   ├── download_data.py
 │   │   ├── run_full_pipeline.sh
@@ -171,7 +174,8 @@ urdu-misinfo-audit/
 │   │   ├── check_gpu_env.py           # environment gate, run as a subprocess (M4-5)
 │   │   ├── diagnose_numpy_env.py      # read-only numpy environment diagnostic
 │   │   ├── inventory_staging_checkpoints.py  # verify pushed checkpoints (M4-6 step 0)
-│   │   └── MILESTONE_4_GPU_HANDOFF.md # Colab/Kaggle run instructions for C and D
+│   │   ├── MILESTONE_4_GPU_HANDOFF.md # Colab/Kaggle run instructions for C and D
+│   │   └── MILESTONE_5_GPU_HANDOFF.md # ditto for Experiment F (inference only)
 │   ├── tests/                         # data-validation tests (TESTING_STRATEGY.md S1's
 │   │   └── test_raw_data_integrity.py # "Data validation tests" — own pytest target
 │   ├── requirements.txt               # pinned per REPRODUCIBILITY.md Section 1
