@@ -1,0 +1,227 @@
+{
+  "experiment_id": "F",
+  "model": "tfidf_svm",
+  "dataset": "notri_fact",
+  "split": "holdout",
+  "seed": 42,
+  "n_examples": 13355,
+  "metrics": {
+    "accuracy": 0.5030325720703857,
+    "macro_f1": 0.47868797378092165,
+    "weighted_f1": 0.47894947154494566,
+    "roc_auc": 0.5161171538140347,
+    "pr_auc": 0.5166328843554013
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        4802,
+        1891
+      ],
+      [
+        4746,
+        1916
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.5029325513196481,
+      "recall": 0.7174660092634095,
+      "f1": 0.5913428976048273,
+      "support": 6693
+    },
+    "real": {
+      "precision": 0.5032834252692409,
+      "recall": 0.28760132092464724,
+      "f1": 0.36603304995701597,
+      "support": 6662
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 9548,
+      "real": 3807
+    },
+    "dominant_class_share": 0.7149,
+    "is_collapsed": false
+  },
+  "majority_class_baseline": {
+    "majority_class": "fake",
+    "accuracy": 0.5011606140022463,
+    "macro_f1": 0.3338487629688747
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-20T09:03:49.905021+00:00",
+    "git_commit": "aefd2f913e82f70e4ccd6c460800316df6f0b7fd",
+    "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
+    "python_version": "3.13.3",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "n_train": 6405,
+    "train_split": "ax_to_grind_train",
+    "base_experiment_id": "B",
+    "retrained_from_config": true,
+    "transfer": {
+      "direction_id": "F",
+      "description": "train Ax-to-Grind -> test Notri-Fact (zero-shot)",
+      "source_dataset": "ax_to_grind",
+      "source_split": "train",
+      "target_dataset": "notri_fact",
+      "target_split": "holdout",
+      "zero_shot": true,
+      "target_used_for_training": false,
+      "target_used_for_tuning": false,
+      "dedup_gate": {
+        "cross_dataset_near_duplicate_pairs": 0,
+        "source": "research/data/audit/duplication_report.json"
+      }
+    }
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "version": 1,
+      "random_state": 42,
+      "features": {
+        "tfidf": {
+          "word": {
+            "enabled": true,
+            "ngram_range": [
+              1,
+              2
+            ],
+            "min_df": 2,
+            "max_df": 0.9,
+            "max_features": 200000,
+            "sublinear_tf": true
+          },
+          "char": {
+            "enabled": true,
+            "analyzer": "char_wb",
+            "ngram_range": [
+              3,
+              5
+            ],
+            "min_df": 3,
+            "max_df": 0.9,
+            "max_features": 300000,
+            "sublinear_tf": true
+          },
+          "lowercase": false,
+          "strip_accents": null
+        }
+      },
+      "experiments": {
+        "A": {
+          "name": "tfidf_logreg",
+          "description": "Experiment A — TF-IDF + Logistic Regression, in-domain on Ax-to-Grind",
+          "classifier": "logistic_regression",
+          "params": {
+            "C": 1.0,
+            "max_iter": 2000,
+            "class_weight": "balanced",
+            "solver": "liblinear"
+          }
+        },
+        "B": {
+          "name": "tfidf_svm",
+          "description": "Experiment B — TF-IDF + linear SVM, in-domain on Ax-to-Grind",
+          "classifier": "linear_svc",
+          "params": {
+            "C": 1.0,
+            "max_iter": 5000,
+            "class_weight": "balanced"
+          }
+        },
+        "H": {
+          "name": "length_only",
+          "description": "Experiment H — length-only baseline. Logistic regression over LENGTH-DERIVED FEATURES ONLY, with no access to article content whatsoever. This is the direct operationalisation of RQ3 (MASTER_PROJECT_BLUEPRINT.md Part 32: \"the fastest way to isolate the length shortcut — a linear model on word count alone\"). Its macro-F1 is the floor that any content-based model must clear to have demonstrated it learned something beyond article length.\n",
+          "classifier": "logistic_regression",
+          "features": [
+            "n_chars",
+            "n_words"
+          ],
+          "standardise": true,
+          "params": {
+            "C": 1.0,
+            "max_iter": 2000,
+            "class_weight": "balanced",
+            "solver": "liblinear"
+          }
+        },
+        "H2": {
+          "name": "length_only",
+          "description": "Experiment H2 — length-only baseline, NONLINEAR. Added by DECISION_REGISTER.md M3-1 (approved 2026-08-14). Identical to H in every respect except the classifier: same two length-derived features, still no access to article content whatsoever. It exists because Milestone 3 measured Ax-to-Grind's length↔label relationship as U-shaped (fake at both extremes, real in a narrow middle band), which a linear model structurally cannot express — so H's macro-F1 is a FLOOR on the length shortcut, not a measurement of it. H2 supplies the ceiling. RQ3 reports both.\n",
+          "classifier": "decision_tree",
+          "features": [
+            "n_chars",
+            "n_words"
+          ],
+          "standardise": false,
+          "params": {
+            "max_depth": 2,
+            "class_weight": "balanced"
+          },
+          "diagnostic_depths": [
+            2,
+            5
+          ]
+        }
+      },
+      "evaluation": {
+        "primary_metric": "macro_f1",
+        "compute_roc_auc": true,
+        "compute_pr_auc": true,
+        "splits_evaluated": [
+          "val",
+          "test"
+        ]
+      }
+    }
+  }
+}

@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -78,6 +77,201 @@ def resolve_repo_id(model_config: dict[str, Any], prefix: str | None = None) -> 
     return f"{prefix}/{suffix}" if prefix else suffix
 
 
+def load_checkpoint(
+    model_config: dict[str, Any],
+    seed: int,
+    *,
+    repo_id: str | None = None,
+    revision: str | None = None,
+):
+    """Pull one seed's checkpoint from its staging repo.
+
+    Returns `(model, tokenizer, repo_id, revision, revision_sha)`. The SHA is read
+    back from the Hub because `REPRODUCIBILITY.md` Section 6 requires a result be
+    traceable to repo id **and** revision — a branch name moves, a SHA does not.
+    """
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    token = os.environ.get(ENV_HF_TOKEN, "").strip() or None
+    repo_id = repo_id or resolve_repo_id(model_config)
+    revision = revision or f"seed-{seed}"
+
+    print(f"  pulling {repo_id}@{revision}")
+    tokenizer = AutoTokenizer.from_pretrained(repo_id, revision=revision, token=token)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        repo_id, revision=revision, token=token
+    )
+
+    revision_sha = None
+    try:
+        from huggingface_hub import HfApi
+
+        revision_sha = getattr(
+            HfApi(token=token).repo_info(repo_id=repo_id, revision=revision), "sha", None
+        )
+    except Exception as exc:  # noqa: BLE001 - provenance nicety, never fatal
+        print(f"    (could not read revision sha: {exc})")
+
+    return model, tokenizer, repo_id, revision, revision_sha
+
+
+def score_frame(
+    model,
+    tokenizer,
+    frame,
+    *,
+    max_length: int,
+    eval_batch_size: int,
+    use_fp16: bool,
+    label_to_id: dict[str, int],
+    id_to_label: dict[int, str],
+    positive_label: str,
+) -> tuple[list[str], list[float]]:
+    """Run inference over one frame. THE single scoring implementation.
+
+    Used by the recovery path and by the cross-dataset runner alike, so a change
+    to how predictions are produced cannot apply to one and not the other. Runs
+    identically on CPU and GPU — it is a forward pass; a GPU only changes the
+    wall-clock.
+    """
+    import tempfile as _tempfile
+
+    import torch
+    from transformers import DataCollatorWithPadding, Trainer, TrainingArguments
+
+    dataset = build_dataset(frame, tokenizer, max_length=max_length, label_to_id=label_to_id)
+
+    with _tempfile.TemporaryDirectory() as tmp_dir:
+        args = TrainingArguments(
+            output_dir=tmp_dir,
+            per_device_eval_batch_size=eval_batch_size,
+            fp16=use_fp16,
+            dataloader_pin_memory=torch.cuda.is_available(),
+            report_to=[],
+            disable_tqdm=False,
+        )
+        trainer = Trainer(
+            model=model,
+            args=args,
+            data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
+        )
+        output = trainer.predict(dataset)
+
+    logits = (
+        output.predictions[0]
+        if isinstance(output.predictions, tuple)
+        else output.predictions
+    )
+    probabilities = torch.softmax(torch.tensor(logits), dim=-1).numpy()
+    predicted_ids = probabilities.argmax(axis=-1)
+
+    y_pred = [id_to_label[int(i)] for i in predicted_ids]
+    scores = [float(row[label_to_id[positive_label]]) for row in probabilities]
+    return y_pred, scores
+
+
+def evaluate_on_frame(
+    *,
+    experiment_id: str,
+    model_config: dict[str, Any],
+    data_config: dict[str, Any],
+    seed: int,
+    frame,
+    dataset: str,
+    split: str,
+    extra_metadata: dict[str, Any] | None = None,
+    repo_id: str | None = None,
+    revision: str | None = None,
+    push_results: bool = True,
+) -> Path:
+    """Score a checkpoint against an arbitrary frame and write its metrics file.
+
+    The general form behind both uses: in-domain recovery re-scores the corpus a
+    checkpoint was trained on, cross-dataset transfer (Experiment F) scores it
+    against a corpus it has never seen. Inference-only in both cases — no training,
+    no adaptation, no tuning on the evaluated data.
+    """
+    import torch
+
+    training_cfg = dict(model_config["training"])
+    label_order = data_config["labels"]["order"]
+    positive_label = data_config["labels"]["positive"]
+    label_to_id, id_to_label = _label_maps(label_order)
+    max_length = model_config["tokenizer"]["max_length"]
+    use_fp16 = bool(training_cfg.get("fp16", False)) and torch.cuda.is_available()
+
+    model, tokenizer, repo_id, revision, revision_sha = load_checkpoint(
+        model_config, seed, repo_id=repo_id, revision=revision
+    )
+
+    truncation = truncation_stats(frame, tokenizer, max_length)
+    y_pred, scores = score_frame(
+        model,
+        tokenizer,
+        frame,
+        max_length=max_length,
+        eval_batch_size=training_cfg["per_device_eval_batch_size"],
+        use_fp16=use_fp16,
+        label_to_id=label_to_id,
+        id_to_label=id_to_label,
+        positive_label=positive_label,
+    )
+
+    metadata: dict[str, Any] = {
+        "checkpoint": {
+            "repo_id": repo_id,
+            "revision_branch": revision,
+            "revision_sha": revision_sha,
+        },
+        "inference_only": True,
+        # Truncation of the EVALUATED corpus (M4-1 constrains how results may be
+        # phrased); for a cross-dataset run this is the target corpus, not the
+        # corpus the checkpoint was trained on.
+        "truncation": truncation,
+        "fp16": use_fp16,
+        "hardware": _hardware_metadata(),
+        "dry_run": False,
+    }
+    if extra_metadata:
+        metadata.update(extra_metadata)
+
+    record = build_metrics_record(
+        experiment_id=experiment_id,
+        model=model_config["model"]["name"],
+        dataset=dataset,
+        split=split,
+        seed=seed,
+        y_true=frame["label"].tolist(),
+        y_pred=y_pred,
+        labels=label_order,
+        scores=scores,
+        positive_label=positive_label,
+        config={"data": data_config, "model": model_config},
+        extra_metadata=metadata,
+    )
+
+    problems = validate_metrics_record(record)
+    if problems:
+        raise RuntimeError(
+            f"{experiment_id}/{split}/seed{seed} metrics violate contract: {problems}"
+        )
+
+    filename = (
+        f"{experiment_id}_{model_config['model']['name']}_{dataset}_{split}_seed{seed}.json"
+    )
+    path = write_metrics(record, filename)
+    print(
+        f"  {dataset}/{split}: macro-F1={record['metrics']['macro_f1']:.4f} "
+        f"acc={record['metrics']['accuracy']:.4f} "
+        f"dominant-class={record['prediction_collapse']['dominant_class_share']:.2%} "
+        f"-> {path.name}"
+    )
+
+    if push_results:
+        push_result_files([path])
+    return path
+
+
 def evaluate_one_checkpoint(
     experiment_id: str,
     model_config: dict[str, Any],
@@ -93,9 +287,6 @@ def evaluate_one_checkpoint(
     from transformers import (
         AutoModelForSequenceClassification,
         AutoTokenizer,
-        DataCollatorWithPadding,
-        Trainer,
-        TrainingArguments,
     )
 
     token = os.environ.get(ENV_HF_TOKEN, "").strip() or None
@@ -145,103 +336,90 @@ def evaluate_one_checkpoint(
         for split, frame in split_frames.items()
     }
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        args = TrainingArguments(
-            output_dir=tmp_dir,
-            per_device_eval_batch_size=eval_batch_size,
-            fp16=use_fp16,
-            dataloader_pin_memory=torch.cuda.is_available(),
-            report_to=[],
-            disable_tqdm=False,
+    written: list[str] = []
+    for split in eval_datasets:
+        # Shared with the cross-dataset runner, so a change to how predictions
+        # are produced cannot apply to one path and not the other.
+        y_pred, scores = score_frame(
+            model,
+            tokenizer,
+            split_frames[split],
+            max_length=max_length,
+            eval_batch_size=eval_batch_size,
+            use_fp16=use_fp16,
+            label_to_id=label_to_id,
+            id_to_label=id_to_label,
+            positive_label=positive_label,
         )
-        trainer = Trainer(
-            model=model,
-            args=args,
-            data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
-        )
+        y_true = split_frames[split]["label"].tolist()
 
-        written: list[str] = []
-        for split, dataset in eval_datasets.items():
-            output = trainer.predict(dataset)
-            logits = (
-                output.predictions[0]
-                if isinstance(output.predictions, tuple)
-                else output.predictions
-            )
-            probabilities = torch.softmax(torch.tensor(logits), dim=-1).numpy()
-            predicted_ids = probabilities.argmax(axis=-1)
-
-            y_pred = [id_to_label[int(i)] for i in predicted_ids]
-            y_true = split_frames[split]["label"].tolist()
-            scores = [float(row[label_to_id[positive_label]]) for row in probabilities]
-
-            record = build_metrics_record(
-                experiment_id=experiment_id,
-                model=model_config["model"]["name"],
-                dataset="ax_to_grind",
-                split=split,
-                seed=seed,
-                y_true=y_true,
-                y_pred=y_pred,
-                labels=label_order,
-                scores=scores,
-                positive_label=positive_label,
-                config={"data": data_config, "model": model_config},
-                extra_metadata={
-                    # True of the split, not of the training run, so still accurate.
-                    "n_train": len(train_frame),
-                    "train_split": "ax_to_grind_train",
-                    # Describe how the checkpoint WAS trained; read from the same
-                    # config that trained it, not from observation of this run.
-                    "epochs": training_cfg["num_train_epochs"],
-                    "effective_batch_size": training_cfg["per_device_train_batch_size"]
-                    * training_cfg.get("gradient_accumulation_steps", 1),
-                    "fp16": use_fp16,
-                    "truncation": truncation,
-                    # NOT observable from a checkpoint. Explicitly null, never a
-                    # plausible-looking placeholder (CLAUDE.md rule 2).
-                    "train_runtime_seconds": None,
-                    "train_loss": None,
-                    # This is the EVALUATION host, not the training host.
-                    "hardware": _hardware_metadata(),
-                    "evaluation_only_recovery": {
-                        "recovered": True,
-                        "reason": (
-                            "Metrics lost with the Kaggle session's working directory "
-                            "before download (DECISION_REGISTER.md M4-6). Re-scored "
-                            "from the pushed checkpoint, which load_best_model_at_end "
-                            "makes the exact model that produced the original numbers."
-                        ),
-                        "checkpoint_repo_id": repo_id,
-                        "checkpoint_revision_branch": revision,
-                        "checkpoint_revision_sha": revision_sha,
-                        "unavailable_fields": [
-                            "train_runtime_seconds",
-                            "train_loss",
-                            "training_hardware",
-                        ],
-                        "hardware_is": "evaluation host, not the training host",
-                    },
-                    "dry_run": False,
+        record = build_metrics_record(
+            experiment_id=experiment_id,
+            model=model_config["model"]["name"],
+            dataset="ax_to_grind",
+            split=split,
+            seed=seed,
+            y_true=y_true,
+            y_pred=y_pred,
+            labels=label_order,
+            scores=scores,
+            positive_label=positive_label,
+            config={"data": data_config, "model": model_config},
+            extra_metadata={
+                # True of the split, not of the training run, so still accurate.
+                "n_train": len(train_frame),
+                "train_split": "ax_to_grind_train",
+                # Describe how the checkpoint WAS trained; read from the same
+                # config that trained it, not from observation of this run.
+                "epochs": training_cfg["num_train_epochs"],
+                "effective_batch_size": training_cfg["per_device_train_batch_size"]
+                * training_cfg.get("gradient_accumulation_steps", 1),
+                "fp16": use_fp16,
+                "truncation": truncation,
+                # NOT observable from a checkpoint. Explicitly null, never a
+                # plausible-looking placeholder (CLAUDE.md rule 2).
+                "train_runtime_seconds": None,
+                "train_loss": None,
+                # This is the EVALUATION host, not the training host.
+                "hardware": _hardware_metadata(),
+                "evaluation_only_recovery": {
+                    "recovered": True,
+                    "reason": (
+                        "Metrics lost with the Kaggle session's working directory "
+                        "before download (DECISION_REGISTER.md M4-6). Re-scored "
+                        "from the pushed checkpoint, which load_best_model_at_end "
+                        "makes the exact model that produced the original numbers."
+                    ),
+                    "checkpoint_repo_id": repo_id,
+                    "checkpoint_revision_branch": revision,
+                    "checkpoint_revision_sha": revision_sha,
+                    "unavailable_fields": [
+                        "train_runtime_seconds",
+                        "train_loss",
+                        "training_hardware",
+                    ],
+                    "hardware_is": "evaluation host, not the training host",
                 },
+                "dry_run": False,
+            },
+        )
+
+        problems = validate_metrics_record(record)
+        if problems:
+            raise RuntimeError(
+                f"{experiment_id}/{split}/seed{seed} metrics violate contract: {problems}"
             )
 
-            problems = validate_metrics_record(record)
-            if problems:
-                raise RuntimeError(
-                    f"{experiment_id}/{split}/seed{seed} metrics violate contract: {problems}"
-                )
-
-            filename = (
-                f"{experiment_id}_{model_config['model']['name']}"
-                f"_ax_to_grind_{split}_seed{seed}.json"
-            )
-            path = write_metrics(record, filename)
-            written.append(str(path))
-            print(
-                f"  {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
-                f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"
-            )
+        filename = (
+            f"{experiment_id}_{model_config['model']['name']}"
+            f"_ax_to_grind_{split}_seed{seed}.json"
+        )
+        path = write_metrics(record, filename)
+        written.append(str(path))
+        print(
+            f"  {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
+            f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"
+        )
 
     result: dict[str, Any] = {
         "experiment_id": experiment_id,
