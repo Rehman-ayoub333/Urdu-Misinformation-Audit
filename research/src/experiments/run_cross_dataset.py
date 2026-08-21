@@ -84,13 +84,22 @@ def load_config(name: str) -> dict[str, Any]:
     return yaml.safe_load((CONFIG_DIR / name).read_text(encoding="utf-8"))
 
 
-def _transfer_metadata(direction_id: str) -> dict[str, Any]:
+def transfer_metadata(
+    direction_id: str, direction: dict[str, str] | None = None
+) -> dict[str, Any]:
     """Provenance that makes a cross-dataset file self-describing.
 
     A reader must never have to infer which way the transfer ran from the
     filename alone.
+
+    `direction` may be supplied for a transfer that is not one of `DIRECTIONS`'
+    own rows. Experiment Q is that case: it runs F's direction with an ablated
+    training corpus (`DECISION_REGISTER.md` M2-3), so it needs this block written
+    the same way, but it is not a new *direction* and adding it to `DIRECTIONS`
+    would put it in `--directions`' choices where the standard runner would score
+    it as if no ablation had been applied.
     """
-    direction = DIRECTIONS[direction_id]
+    direction = direction if direction is not None else DIRECTIONS[direction_id]
     return {
         "transfer": {
             "direction_id": direction_id,
@@ -158,7 +167,7 @@ def run_classical_transfer(
             "train_split": f"{direction['source_dataset']}_{direction['source_split']}",
             "base_experiment_id": base_experiment_id,
             "retrained_from_config": True,
-            **_transfer_metadata(direction_id),
+            **transfer_metadata(direction_id),
         },
     )
 
@@ -227,7 +236,7 @@ def run_transformer_transfer(
         split=direction["target_split"],
         extra_metadata={
             "base_experiment_id": base_experiment_id,
-            **_transfer_metadata(direction_id),
+            **transfer_metadata(direction_id),
         },
         push_results=push_results,
     )

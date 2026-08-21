@@ -34,7 +34,7 @@ import json
 import os
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +87,32 @@ class DryRunSettings:
     epochs: int = 1
     seeds: tuple[int, ...] = (42,)
     push: bool = False
+
+    # Where a dry run's metrics and per-example predictions are written, if
+    # anywhere. `None` (the default) writes nothing at all, which is the original
+    # behaviour. Pointing it at a scratch directory makes the dry run exercise
+    # `write_metrics`/`write_predictions` for real — the only way to *prove* those
+    # land rather than infer it from the code — while keeping a toy result out of
+    # `research/results/metrics/`, which `CLAUDE.md` rule 2 forbids. It must never
+    # be set to the real metrics directory.
+    metrics_destination: Path | None = None
+
+
+@dataclass
+class EvalTarget:
+    """One frame to score after training, plus how its metrics file is named.
+
+    C and D evaluate the Ax-to-Grind splits their training corpus came from, so
+    the dataset name could once be assumed. Experiment Q reuses this same training
+    path but scores **Notri-Fact** afterwards
+    (`DECISION_REGISTER.md` M2-3), so the dataset a frame belongs to now travels
+    with the frame rather than being inferred from the training corpus — which is
+    what keeps the filename and the `dataset` field in the record honest.
+    """
+
+    dataset: str
+    split: str
+    frame: Any  # pandas DataFrame
 
 
 def load_config(name: str) -> dict[str, Any]:
@@ -258,10 +284,34 @@ def train_one_seed(
     *,
     dry_run: DryRunSettings | None = None,
     output_root: Path | None = None,
+    train_frame=None,  # noqa: ANN001 - pandas DataFrame
+    selection_frame=None,  # noqa: ANN001 - pandas DataFrame
+    selection_label: str | None = None,
+    eval_targets: list[EvalTarget] | None = None,
+    train_split_label: str = "ax_to_grind_train",
+    extra_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Fine-tune one model at one seed and write its val/test metrics.
+    """Fine-tune one model at one seed and write its metrics.
 
     Returns a summary dict; metrics files are written as a side effect.
+
+    Every keyword after `output_root` defaults to the C/D behaviour this function
+    was written for — train on `ax_to_grind_train`, select the checkpoint on
+    `ax_to_grind_val`, score the splits named in the model config. They exist so
+    **Experiment Q** can reuse this exact training path with a punctuation-stripped
+    training corpus and a Notri-Fact evaluation target
+    (`DECISION_REGISTER.md` M2-3) rather than growing a second, drifting copy of it:
+
+        train_frame:       rows to fine-tune on. Q passes an ablated copy.
+        selection_frame:   the in-training eval set behind `load_best_model_at_end`.
+                           Never written to a metrics file — it drives model
+                           selection, which `REPRODUCIBILITY.md` Section 6 scopes
+                           out of the reported set.
+        eval_targets:      what gets scored and written afterwards.
+        train_split_label: what `run_metadata.train_split` records. It must name
+                           the ablation when one was applied, or the file would
+                           claim to have trained on the corpus as released.
+        extra_metadata:    merged into `run_metadata` for every written record.
     """
     import torch
     from transformers import (
@@ -300,15 +350,21 @@ def train_one_seed(
         label2id=label_to_id,
     )
 
-    train_frame = load_split_frame("ax_to_grind", "train")
-    split_frames = {
-        split: load_split_frame("ax_to_grind", split)
-        for split in model_config["evaluation"]["splits_evaluated"]
-    }
+    if train_frame is None:
+        train_frame = load_split_frame("ax_to_grind", "train")
+    if eval_targets is None:
+        eval_targets = [
+            EvalTarget("ax_to_grind", split, load_split_frame("ax_to_grind", split))
+            for split in model_config["evaluation"]["splits_evaluated"]
+        ]
 
     if dry_run:
         train_frame = train_frame.head(dry_run.n_train)
-        split_frames = {k: v.head(dry_run.n_eval) for k, v in split_frames.items()}
+        eval_targets = [
+            replace(target, frame=target.frame.head(dry_run.n_eval)) for target in eval_targets
+        ]
+        if selection_frame is not None:
+            selection_frame = selection_frame.head(dry_run.n_eval)
 
     truncation = truncation_stats(train_frame, tokenizer, max_length)
     print(
@@ -321,9 +377,31 @@ def train_one_seed(
         train_frame, tokenizer, max_length=max_length, label_to_id=label_to_id
     )
     eval_datasets = {
-        split: build_dataset(frame, tokenizer, max_length=max_length, label_to_id=label_to_id)
-        for split, frame in split_frames.items()
+        target.split: build_dataset(
+            target.frame, tokenizer, max_length=max_length, label_to_id=label_to_id
+        )
+        for target in eval_targets
     }
+    # M4-1 asks that a result state what it could not see. For an in-domain run the
+    # training corpus's figure above answers that; for a cross-dataset one it does
+    # not, because the corpus being scored is a different corpus with a different
+    # length distribution. Recorded per target so both questions have an answer in
+    # the file rather than only the one that happened to matter for C and D.
+    truncation_evaluated = {
+        target.split: truncation_stats(target.frame, tokenizer, max_length)
+        for target in eval_targets
+    }
+
+    # Falls back to the "val" target, which is exactly what C and D have always
+    # selected on — the parameter only exists so Q can select on an ablated copy of
+    # the same split instead of one whose surface form its training never saw.
+    if selection_frame is None:
+        selection_dataset = eval_datasets.get("val")
+        selection_label = selection_label or ("ax_to_grind_val" if selection_dataset else None)
+    else:
+        selection_dataset = build_dataset(
+            selection_frame, tokenizer, max_length=max_length, label_to_id=label_to_id
+        )
 
     run_dir = (output_root or CHECKPOINT_DIR) / f"{experiment_id}_{model_config['model']['name']}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -382,7 +460,7 @@ def train_one_seed(
         model=model,
         args=args,
         train_dataset=train_dataset,
-        eval_dataset=eval_datasets.get("val"),
+        eval_dataset=selection_dataset,
         compute_metrics=_compute_metrics_for_trainer(label_order),
         # Pads each batch to its own longest sequence rather than to max_length.
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
@@ -393,22 +471,30 @@ def train_one_seed(
     train_seconds = time.time() - started
     print(f"  training finished in {train_seconds:.1f}s")
 
+    # A dry run must never write into research/results/metrics/ — those are
+    # committed research artefacts and an 8-row toy result has no business there
+    # (CLAUDE.md rule 2). It may write to an explicit scratch directory, which is
+    # how the write path itself gets exercised rather than assumed.
+    destination = dry_run.metrics_destination if dry_run else None
+    writes_files = destination is not None or not dry_run
+
     written: list[str] = []
-    for split, dataset in eval_datasets.items():
-        output = trainer.predict(dataset)
+    prediction_files: list[str] = []
+    for target in eval_targets:
+        output = trainer.predict(eval_datasets[target.split])
         logits = output.predictions[0] if isinstance(output.predictions, tuple) else output.predictions
         probabilities = torch.softmax(torch.tensor(logits), dim=-1).numpy()
         predicted_ids = probabilities.argmax(axis=-1)
 
         y_pred = [id_to_label[int(i)] for i in predicted_ids]
-        y_true = split_frames[split]["label"].tolist()
+        y_true = target.frame["label"].tolist()
         scores = [float(row[label_to_id[positive_label]]) for row in probabilities]
 
         record = build_metrics_record(
             experiment_id=experiment_id,
             model=model_config["model"]["name"],
-            dataset="ax_to_grind",
-            split=split,
+            dataset=target.dataset,
+            split=target.split,
             seed=seed,
             y_true=y_true,
             y_pred=y_pred,
@@ -418,60 +504,102 @@ def train_one_seed(
             config={"data": data_config, "model": model_config},
             extra_metadata={
                 "n_train": len(train_frame),
-                "train_split": "ax_to_grind_train",
+                "train_split": train_split_label,
                 "train_runtime_seconds": round(train_seconds, 2),
                 "train_loss": float(train_result.training_loss),
                 "epochs": epochs,
                 "effective_batch_size": batch_size
                 * training_cfg.get("gradient_accumulation_steps", 1),
                 "fp16": use_fp16,
-                # M4-1: what this run could not see.
+                # M4-1: what this run could not see, on both corpora it touched.
                 "truncation": truncation,
+                "truncation_evaluated": truncation_evaluated[target.split],
+                "checkpoint_selection": {
+                    "selected_on": selection_label,
+                    "metric": training_cfg.get("metric_for_best_model", "macro_f1"),
+                    "best_metric": (
+                        float(trainer.state.best_metric)
+                        if trainer.state.best_metric is not None
+                        else None
+                    ),
+                    "load_best_model_at_end": bool(args.load_best_model_at_end),
+                },
                 "hardware": _hardware_metadata(),
                 "dry_run": bool(dry_run),
+                **(extra_metadata or {}),
             },
         )
 
         problems = validate_metrics_record(record)
         if problems:
-            raise RuntimeError(f"{experiment_id}/{split}/seed{seed} metrics violate contract: {problems}")
+            raise RuntimeError(
+                f"{experiment_id}/{target.split}/seed{seed} metrics violate contract: {problems}"
+            )
 
-        if dry_run:
-            # A dry run must never write into research/results/metrics/ — those are
-            # committed research artefacts and a 32-row toy result has no business
-            # there (CLAUDE.md rule 2).
+        if not writes_files:
             print(
-                f"  [dry-run] {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
+                f"  [dry-run] {target.dataset}/{target.split}: "
+                f"macro-F1={record['metrics']['macro_f1']:.4f} "
                 f"(NOT written to research/results/metrics/)"
             )
-        else:
-            filename = f"{experiment_id}_{model_config['model']['name']}_ax_to_grind_{split}_seed{seed}.json"
-            path = write_metrics(record, filename)
-            written.append(str(path))
+            continue
 
-            # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2.
-            write_predictions(
-                metrics_filename=filename,
-                split=split,
-                row_ids=split_frames[split]["row_id"].tolist(),
-                y_true=y_true,
-                y_pred=y_pred,
-                scores=scores,
-            )
-            print(
-                f"  {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
-                f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"
-            )
+        filename = (
+            f"{experiment_id}_{model_config['model']['name']}"
+            f"_{target.dataset}_{target.split}_seed{seed}.json"
+        )
+        path = write_metrics(record, filename, destination)
+        written.append(str(path))
+
+        # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2.
+        prediction_path = write_predictions(
+            metrics_filename=filename,
+            split=target.split,
+            row_ids=target.frame["row_id"].tolist(),
+            y_true=y_true,
+            y_pred=y_pred,
+            scores=scores,
+            destination=destination,
+        )
+        if prediction_path is not None:
+            prediction_files.append(str(prediction_path))
+        print(
+            f"  {target.dataset}/{target.split}: "
+            f"macro-F1={record['metrics']['macro_f1']:.4f} "
+            f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"
+            + (f" (+ {prediction_path.name})" if prediction_path is not None else "")
+        )
 
     return {
         "experiment_id": experiment_id,
         "seed": seed,
         "train_seconds": train_seconds,
         "metrics_files": written,
+        "prediction_files": prediction_files,
         "checkpoint_dir": str(run_dir),
         "trainer": trainer,
         "tokenizer": tokenizer,
     }
+
+
+def resolve_dry_run_destination(path: str | Path) -> Path:
+    """Validate a dry run's scratch output directory and create it.
+
+    Refuses `research/results/metrics/` outright. A dry run's numbers come from a
+    handful of rows and one epoch; committing them beside real results would be
+    exactly the "plausible-looking placeholder" `CLAUDE.md` rule 2 forbids, and a
+    mistyped flag is the realistic way that happens.
+    """
+    from research.src.evaluation.metrics import METRICS_DIR
+
+    resolved = Path(path).expanduser().resolve()
+    if resolved == METRICS_DIR.resolve():
+        raise ValueError(
+            "a dry run may not write into research/results/metrics/ — those are "
+            "committed research artefacts (CLAUDE.md rule 2). Use a scratch directory."
+        )
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved
 
 
 def _hardware_metadata() -> dict[str, Any]:
@@ -499,6 +627,7 @@ def push_checkpoint(
     seed: int,
     *,
     dry_run: bool = False,
+    branch_suffix: str = "",
 ) -> dict[str, Any]:
     """Push one trained checkpoint to a STAGING Hugging Face repo.
 
@@ -513,12 +642,17 @@ def push_checkpoint(
 
     Returns the repo id and commit revision, which are what `REPRODUCIBILITY.md`
     Section 6 requires be recorded alongside the metrics.
+
+    `branch_suffix` extends the per-seed branch name so a variant run lands beside
+    the original rather than overwriting it — Experiment Q pushes to
+    `seed-{n}-punct-ablation` in the same XLM-R staging repo, keeping one repo per
+    model instead of one per experiment.
     """
     prefix = os.environ.get(ENV_HF_STAGING_PREFIX, "").strip()
     token = os.environ.get(ENV_HF_TOKEN, "").strip()
     suffix = model_config["checkpoint_push"]["staging_repo_suffix"]
     repo_id = f"{prefix}/{suffix}" if prefix else suffix
-    revision_branch = f"seed-{seed}"
+    revision_branch = f"seed-{seed}{branch_suffix}"
 
     if dry_run:
         return {
@@ -625,6 +759,15 @@ def main(argv: list[str] | None = None) -> int:
     # so the fast defaults are not silently undone by argparse.
     parser.add_argument("--dry-run-max-length", type=int, default=None)
     parser.add_argument("--dry-run-train-rows", type=int, default=None)
+    parser.add_argument(
+        "--dry-run-output-dir",
+        default=None,
+        help=(
+            "Scratch directory for the dry run's metrics and predictions. Off by "
+            "default (nothing is written). Never point this at "
+            "research/results/metrics/ — a toy result must not land there."
+        ),
+    )
     parser.add_argument("--no-push", action="store_true")
     args = parser.parse_args(argv)
 
@@ -636,6 +779,10 @@ def main(argv: list[str] | None = None) -> int:
             overrides["max_length"] = args.dry_run_max_length
         if args.dry_run_train_rows is not None:
             overrides["n_train"] = args.dry_run_train_rows
+        if args.dry_run_output_dir is not None:
+            overrides["metrics_destination"] = resolve_dry_run_destination(
+                args.dry_run_output_dir
+            )
         dry_run = DryRunSettings(**overrides)
 
     if dry_run:
@@ -643,7 +790,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"    {dry_run.n_train} train rows, {dry_run.n_eval} eval rows, "
               f"max_length={dry_run.max_length}, batch={dry_run.batch_size}, "
               f"epochs={dry_run.epochs}, seeds={dry_run.seeds}")
-        print("    No metrics are written and no checkpoint is pushed.\n")
+        if dry_run.metrics_destination is None:
+            print("    No metrics are written and no checkpoint is pushed.\n")
+        else:
+            print(
+                f"    Metrics + predictions -> {dry_run.metrics_destination} "
+                "(scratch, never research/results/metrics/). No checkpoint is pushed.\n"
+            )
 
     summaries = []
     for experiment_id in args.experiments:

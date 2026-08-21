@@ -172,7 +172,13 @@ def _committed_metrics_files() -> list:
 # it and Haroon (2026) reported it at 99.7% — so the in-domain "not degenerate"
 # acceptance criterion below cannot apply to these files. They get their own,
 # weaker-but-still-real soundness check instead.
-_TRANSFER_EXPERIMENTS = ("F", "G")
+#
+# Q belongs here for the same reason and not by analogy: it IS F's direction, run
+# with a punctuation-stripped training corpus (`DECISION_REGISTER.md` M2-3). Its
+# whole purpose is to be compared against F's collapse, so holding it to the
+# in-domain criterion would fail the run precisely when it reproduces the result
+# it exists to measure.
+_TRANSFER_EXPERIMENTS = ("F", "G", "Q")
 
 
 def _is_transfer(path) -> bool:

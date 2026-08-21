@@ -1,9 +1,16 @@
-"""Shortcut analysis — Experiments H and H2 (length-only) at Milestone 3.
+"""Shortcut analysis — Experiments H, H2 (length-only) and Q (punctuation-ablation).
 
-`EXPERIMENT_PLAN.md` Section 2 steps 2 and 2b. Other modes listed in that table
-(`length-ablation` = I, `length-buckets` = J, `punctuation-ablation` = Q) require
-trained transformer checkpoints and belong to Milestones 4-5; they are declared in
-the CLI so the surface matches the plan, and exit cleanly rather than pretending.
+`EXPERIMENT_PLAN.md` Section 2 steps 2, 2b and 4b. The remaining modes listed in
+that table (`length-ablation` = I, `length-buckets` = J) require trained
+transformer checkpoints and belong to Milestones 5/5.5; they are declared in the
+CLI so the surface matches the plan, and exit cleanly rather than pretending.
+
+`--mode punctuation-ablation` retrains XLM-R on a punctuation-stripped copy of
+Ax-to-Grind and re-runs Experiment F's zero-shot evaluation on Notri-Fact
+(`DECISION_REGISTER.md` M2-3). It is a **GPU-scale** run, unlike H/H2 — the
+implementation and the ablation itself live in
+`research/src/experiments/punctuation_ablation.py`, which this module dispatches
+to rather than duplicating.
 
 **What `--mode length-only` measures.** A model over article length features alone
 — no words, no vocabulary, no content of any kind. Its macro-F1 is how much of
@@ -29,6 +36,8 @@ Usage:
     python -m research.src.experiments.run_shortcut_analysis --mode length-only
     python -m research.src.experiments.run_shortcut_analysis --mode length-only \\
         --classifier decision_tree
+    python -m research.src.experiments.run_shortcut_analysis \\
+        --mode punctuation-ablation --dry-run
 """
 
 from __future__ import annotations
@@ -63,8 +72,13 @@ CONFIG_DIR = _ROOT / "research" / "configs"
 MILESTONE_5_MODES = {
     "length-ablation": "Experiment I — needs a trained checkpoint (Milestone 5)",
     "length-buckets": "Experiment J — needs trained checkpoints (Milestone 5.5)",
-    "punctuation-ablation": "Experiment Q — needs XLM-R retraining (Milestone 5, M2-3)",
 }
+
+# Modes that fine-tune a transformer rather than fitting a cheap classical model.
+# Dispatched to their own module and given their own flags, because the arguments
+# a GPU run needs (seeds, dry run, checkpoint push) have nothing in common with
+# H/H2's.
+PUNCTUATION_ABLATION_MODE = "punctuation-ablation"
 
 
 def load_config(name: str) -> dict[str, Any]:
@@ -287,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mode",
         required=True,
-        choices=["length-only", *MILESTONE_5_MODES],
+        choices=["length-only", PUNCTUATION_ABLATION_MODE, *MILESTONE_5_MODES],
     )
     parser.add_argument(
         "--classifier",
@@ -302,11 +316,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", default="ax_to_grind")
     parser.add_argument("--data-config", default="data.yaml")
     parser.add_argument("--model-config", default="model_classical.yaml")
+    # --- punctuation-ablation (Q) only; ignored by the length-only modes ---
+    parser.add_argument("--seeds", nargs="+", type=int, default=None)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--dry-run-output-dir", default=None)
+    parser.add_argument("--no-push", action="store_true")
     args = parser.parse_args(argv)
 
     if args.mode in MILESTONE_5_MODES:
         print(f"--mode {args.mode} is not implemented yet: {MILESTONE_5_MODES[args.mode]}")
         return 2
+
+    if args.mode == PUNCTUATION_ABLATION_MODE:
+        # Imported here, not at module scope: torch is needed for Q but must not
+        # become a requirement for running H/H2, which fit in seconds on a CPU
+        # with scikit-learn alone.
+        from research.src.experiments.punctuation_ablation import main as punctuation_main
+
+        passthrough = ["--data-config", args.data_config]
+        if args.seeds:
+            passthrough += ["--seeds", *[str(seed) for seed in args.seeds]]
+        if args.dry_run:
+            passthrough.append("--dry-run")
+        if args.dry_run_output_dir:
+            passthrough += ["--dry-run-output-dir", args.dry_run_output_dir]
+        if args.no_push:
+            passthrough.append("--no-push")
+        return punctuation_main(passthrough)
 
     data_config = load_config(args.data_config)
     model_config = load_config(args.model_config)
