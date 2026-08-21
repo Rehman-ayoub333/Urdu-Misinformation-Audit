@@ -1,0 +1,256 @@
+{
+  "experiment_id": "I",
+  "model": "tfidf_svm",
+  "dataset": "ax_to_grind",
+  "split": "test",
+  "seed": 42,
+  "n_examples": 1374,
+  "metrics": {
+    "accuracy": 0.8675400291120815,
+    "macro_f1": 0.8675220648223689,
+    "weighted_f1": 0.8675220648223689,
+    "roc_auc": 0.9455006578821914,
+    "pr_auc": 0.9484986758420443
+  },
+  "confusion_matrix": {
+    "labels": [
+      "fake",
+      "real"
+    ],
+    "matrix": [
+      [
+        588,
+        99
+      ],
+      [
+        83,
+        604
+      ]
+    ],
+    "note": "rows = true label, columns = predicted label, in `labels` order"
+  },
+  "per_class": {
+    "fake": {
+      "precision": 0.8763040238450075,
+      "recall": 0.8558951965065502,
+      "f1": 0.865979381443299,
+      "support": 687
+    },
+    "real": {
+      "precision": 0.8591749644381224,
+      "recall": 0.8791848617176128,
+      "f1": 0.8690647482014389,
+      "support": 687
+    }
+  },
+  "prediction_collapse": {
+    "predicted_counts": {
+      "fake": 671,
+      "real": 703
+    },
+    "dominant_class_share": 0.5116,
+    "is_collapsed": false
+  },
+  "majority_class_baseline": {
+    "majority_class": "fake",
+    "accuracy": 0.5,
+    "macro_f1": 0.3333333333333333
+  },
+  "run_metadata": {
+    "timestamp_utc": "2026-08-21T08:16:39.562072+00:00",
+    "git_commit": "16e2537aed29ccbe4cea171ecdf09d69c6a9f200",
+    "dataset_manifest_sha256_prefix": "4d35aa4562cfb693",
+    "python_version": "3.12.11",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "sklearn_version": "1.9.0",
+    "numpy_version": "2.5.2",
+    "n_train": 6405,
+    "train_split": "ax_to_grind_train:capped_50_words",
+    "base_experiment_id": "B",
+    "best_classical_selected_on": "committed Ax-to-Grind test macro-F1: B/tfidf_svm 0.8835 > A/tfidf_logreg 0.8755",
+    "dry_run": false,
+    "ablation": {
+      "type": "length_capping",
+      "cap_words": 50,
+      "is_primary_cap": true,
+      "rule": "keep the first N whitespace-delimited words, drop the rest (right-truncation, consistent with the 512-subword ceiling in DECISION_REGISTER.md M2-1/M4-1)",
+      "applied_to": [
+        "ax_to_grind_train (fine-tuning / fitting corpus)",
+        "ax_to_grind_val (checkpoint selection only, transformer runs)",
+        "ax_to_grind_test (evaluation corpus)"
+      ],
+      "applied_to_both_sides": true,
+      "why_both_sides": "The measurement is how much signal survives when length information is destroyed everywhere, not how a length-aware model copes with shortened test input. Capping only at evaluation time would measure a train/test distribution shift instead.",
+      "applied_on_top_of": "research/src/data/clean.py's Tier-2 output. clean.py itself is UNCHANGED — it is the shared train/serve path (CLAUDE.md rule 4), and length capping there is a Part 8 explicit non-decision because it would pre-empt RQ3's own measurement.",
+      "sweep": {
+        "cap_values": [
+          25,
+          50,
+          100,
+          200
+        ],
+        "primary_cap": 50,
+        "why": "MASTER_PROJECT_BLUEPRINT.md Part 1/11 specify a single 50-word cap (Haroon's design); Part 31 figure 10 specifies a curve of F1 against word cap. The sweep satisfies both, with 50 as the required replication point and the rest supplying the curve."
+      },
+      "train_profile": {
+        "cap_words": 50,
+        "n_examples": 6405,
+        "n_truncated": 1551,
+        "pct_truncated": 24.22,
+        "mean_words_before": 77.11,
+        "mean_words_after": 31.14,
+        "by_label": {
+          "fake": {
+            "n_examples": 3202,
+            "mean_words_before": 120.75,
+            "mean_words_after": 30.2,
+            "n_truncated": 1129,
+            "pct_truncated": 35.26,
+            "max_words_before": 1188
+          },
+          "real": {
+            "n_examples": 3203,
+            "mean_words_before": 33.48,
+            "mean_words_after": 32.08,
+            "n_truncated": 422,
+            "pct_truncated": 13.18,
+            "max_words_before": 190
+          }
+        }
+      },
+      "eval_profile": {
+        "cap_words": 50,
+        "n_examples": 1374,
+        "n_truncated": 338,
+        "pct_truncated": 24.6,
+        "mean_words_before": 72.41,
+        "mean_words_after": 31.59,
+        "by_label": {
+          "fake": {
+            "n_examples": 687,
+            "mean_words_before": 111.61,
+            "mean_words_after": 30.99,
+            "n_truncated": 256,
+            "pct_truncated": 37.26,
+            "max_words_before": 1088
+          },
+          "real": {
+            "n_examples": 687,
+            "mean_words_before": 33.22,
+            "mean_words_after": 32.2,
+            "n_truncated": 82,
+            "pct_truncated": 11.94,
+            "max_words_before": 125
+          }
+        }
+      }
+    },
+    "compares_against": {
+      "purpose": "I minus its uncapped baseline is the in-domain macro-F1 cost of removing article-length information (RQ3). The two runs differ in exactly one respect: I's train and eval text are capped at 50 words. Same model, same config, same seed, same split.",
+      "uncapped_baseline": {
+        "experiment_id": "B",
+        "metrics_file": "B_tfidf_svm_ax_to_grind_test.json",
+        "model": "tfidf_svm",
+        "dataset": "ax_to_grind",
+        "split": "test",
+        "seed": null,
+        "same_seed": false,
+        "macro_f1": 0.8835395829801661
+      },
+      "null_macro_f1_means": "the counterpart file was absent when I ran — recompute from the named file rather than treating the gap as a result",
+      "reference_finding": {
+        "source": "Haroon (2026), arXiv:2607.14131",
+        "via": "MASTER_PROJECT_BLUEPRINT.md Part 1 evidence table",
+        "claim": "capping Ax-to-Grind articles at 50 words yields only a 0.0067 macro-F1 drop, used to argue the length confound inflates but does not solely drive in-domain performance",
+        "reported_macro_f1_drop": 0.0067,
+        "is_this_projects_measurement": false,
+        "note": "External literature value recorded for comparison only. This run's own delta is delta_macro_f1_i_minus_uncapped below."
+      },
+      "macro_f1_capped": 0.8675220648223689,
+      "delta_macro_f1_i_minus_uncapped": -0.016018
+    }
+  },
+  "config": {
+    "data": {
+      "version": 1,
+      "datasets": {
+        "ax_to_grind": {
+          "role": "primary_training_set",
+          "source_file": "research/data/raw/ax_to_grind/Combined .csv",
+          "splits": {
+            "train": "research/data/splits/ax_to_grind_train.txt",
+            "val": "research/data/splits/ax_to_grind_val.txt",
+            "test": "research/data/splits/ax_to_grind_test.txt"
+          }
+        },
+        "notri_fact": {
+          "role": "cross_dataset_test_set",
+          "source_file": "research/data/raw/notri_fact/Notri-Fact_Real_Unreal_Urdu_NEWS.xlsx",
+          "splits": {
+            "holdout": "research/data/splits/notri_fact_holdout.txt"
+          },
+          "train_on": false
+        }
+      },
+      "labels": {
+        "positive": "fake",
+        "negative": "real",
+        "order": [
+          "fake",
+          "real"
+        ]
+      },
+      "preprocessing": {
+        "tier": 2,
+        "cap_length": false,
+        "normalise_numbers": false
+      },
+      "deduplication": {
+        "applied_before_split": true,
+        "report": "research/data/audit/duplication_report.json"
+      }
+    },
+    "model": {
+      "random_state": 42,
+      "features": {
+        "tfidf": {
+          "word": {
+            "enabled": true,
+            "ngram_range": [
+              1,
+              2
+            ],
+            "min_df": 2,
+            "max_df": 0.9,
+            "max_features": 200000,
+            "sublinear_tf": true
+          },
+          "char": {
+            "enabled": true,
+            "analyzer": "char_wb",
+            "ngram_range": [
+              3,
+              5
+            ],
+            "min_df": 3,
+            "max_df": 0.9,
+            "max_features": 300000,
+            "sublinear_tf": true
+          },
+          "lowercase": false,
+          "strip_accents": null
+        }
+      },
+      "experiment": {
+        "name": "tfidf_svm",
+        "description": "Experiment B — TF-IDF + linear SVM, in-domain on Ax-to-Grind",
+        "classifier": "linear_svc",
+        "params": {
+          "C": 1.0,
+          "max_iter": 5000,
+          "class_weight": "balanced"
+        }
+      }
+    }
+  }
+}
