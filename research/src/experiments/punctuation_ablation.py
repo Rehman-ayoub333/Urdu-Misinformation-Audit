@@ -46,9 +46,10 @@ which would inject a brand-new out-of-vocabulary artefact into exactly the corpu
 whose confounds this experiment is trying to isolate. Substituting a space keeps
 the word boundary (`COVID 19`, `F 16`) and costs nothing: measured word counts go
 493,866 → 486,333 under substitution against 484,961 under deletion, and the
-residual drop is punctuation that stood alone as its own token. If this is ever
-revisited, it is the one sub-decision inside Q's definition that was made here
-rather than in M2-3.
+residual drop is punctuation that stood alone as its own token. Logged as its own
+row, `DECISION_REGISTER.md` **M5-4** — it is the one sub-decision inside Q's
+definition that was made at implementation time rather than in M2-3, and flipping
+it would invalidate every `Q_*.json` produced under the current rule.
 
 **One visible consequence, stated rather than discovered later:** `clean.py`'s
 placeholder tokens lose their brackets, so `[URL]` becomes `URL` and `[EMOJI]`
@@ -249,7 +250,7 @@ def ablation_metadata(
                     "into tokens present in neither corpus, injecting a new "
                     "out-of-vocabulary artefact into the corpus whose confounds "
                     "this experiment isolates. Not fixed by M2-3 — decided when Q "
-                    "was implemented; see punctuation_ablation.py's docstring."
+                    "was implemented and logged as DECISION_REGISTER.md M5-4."
                 ),
                 "n_words_before": words_before,
                 "n_words_after": words_after,
