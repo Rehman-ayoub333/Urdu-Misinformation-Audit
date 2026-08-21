@@ -264,7 +264,7 @@ def evaluate_on_frame(
 
     # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2. This is the path
     # the Kaggle backfill of C, D and F's transformer half will run through.
-    write_predictions(
+    prediction_path = write_predictions(
         metrics_filename=filename,
         split=split,
         row_ids=frame["row_id"].tolist(),
@@ -281,7 +281,12 @@ def evaluate_on_frame(
     )
 
     if push_results:
-        push_result_files([path])
+        # The predictions sibling goes up WITH its metrics file, not just the
+        # metrics file. M4-6's rule is that a result is not produced until it is
+        # off the session disk, and for the M5-2 backfill the predictions ARE the
+        # result — the aggregates already exist and merely reproduce. Losing them
+        # to a dead session would cost the same GPU hour all over again.
+        push_result_files([path] + ([prediction_path] if prediction_path else []))
     return path
 
 
@@ -350,6 +355,7 @@ def evaluate_one_checkpoint(
     }
 
     written: list[str] = []
+    prediction_files: list[str] = []
     for split in eval_datasets:
         # Shared with the cross-dataset runner, so a change to how predictions
         # are produced cannot apply to one path and not the other.
@@ -429,23 +435,43 @@ def evaluate_one_checkpoint(
         )
         path = write_metrics(record, filename)
         written.append(str(path))
+
+        # REPRODUCIBILITY.md Section 6 / DECISION_REGISTER.md M5-2. No-ops on val;
+        # the qualifying-splits rule lives in metrics.py so it cannot drift. This
+        # is the artefact the C/D half of the backfill exists to produce — the
+        # aggregates above merely reproduce what is already committed.
+        prediction_path = write_predictions(
+            metrics_filename=filename,
+            split=split,
+            row_ids=split_frames[split]["row_id"].tolist(),
+            y_true=y_true,
+            y_pred=y_pred,
+            scores=scores,
+        )
+        if prediction_path is not None:
+            prediction_files.append(str(prediction_path))
+
         print(
             f"  {split}: macro-F1={record['metrics']['macro_f1']:.4f} "
             f"acc={record['metrics']['accuracy']:.4f} -> {path.name}"
+            + (f" (+ {prediction_path.name})" if prediction_path is not None else "")
         )
 
     result: dict[str, Any] = {
         "experiment_id": experiment_id,
         "seed": seed,
         "metrics_files": written,
+        "prediction_files": prediction_files,
         "checkpoint_repo_id": repo_id,
         "checkpoint_revision_branch": revision,
         "checkpoint_revision_sha": revision_sha,
     }
 
-    # M4-6 again: do not let a recovered metrics file sit only on this disk either.
+    # M4-6 again: do not let a recovered metrics file — or its predictions
+    # sibling, which is the artefact this path now exists to produce — sit only on
+    # this disk either.
     if push_results:
-        result["results_push"] = push_result_files(written)
+        result["results_push"] = push_result_files([*written, *prediction_files])
 
     return result
 
