@@ -413,7 +413,7 @@ def run_seed(
     from research.src.models.transformer import (
         EvalTarget,
         dry_run_slice,
-        push_checkpoint,
+        push_verify_prune,
         train_one_seed,
     )
 
@@ -487,11 +487,12 @@ def run_seed(
     )
 
     should_push = push and model_config["checkpoint_push"].get("enabled", False)
-    push_info = push_checkpoint(
+    push_info = push_verify_prune(
         result.pop("trainer"),
         result.pop("tokenizer"),
         model_config,
         seed,
+        run_dir=result["checkpoint_dir"],
         dry_run=bool(dry_run) or not should_push,
         branch_suffix=CHECKPOINT_BRANCH_SUFFIX,
     )

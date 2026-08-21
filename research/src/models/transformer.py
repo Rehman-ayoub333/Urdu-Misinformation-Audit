@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import random
+import shutil
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -777,6 +778,158 @@ def push_checkpoint(
     }
 
 
+def verify_checkpoint_uploaded(
+    repo_id: str, revision: str, *, token: str | None = None
+) -> dict[str, Any]:
+    """Confirm the Hub actually HOLDS a complete checkpoint at this revision.
+
+    Not the same question as "did the push call return without raising". This
+    lists the files the Hub reports at `revision` and requires config **and**
+    weights **and** tokenizer — the same completeness definition
+    `inventory_staging_checkpoints.py` audits with, imported from one place so the
+    two cannot disagree about what "complete" means.
+
+    **Fails closed.** An unreachable Hub, a missing branch, a partial upload and a
+    missing token all return `verified: False`. Nothing may read an inability to
+    check as permission to proceed — this result is what gates deleting the only
+    other copy of a trained model.
+    """
+    from research.src.models.checkpoint_artifacts import missing_artifact_kinds
+
+    token = token if token is not None else (os.environ.get(ENV_HF_TOKEN, "").strip() or None)
+
+    try:
+        from huggingface_hub import HfApi
+
+        info = HfApi(token=token).repo_info(repo_id=repo_id, revision=revision)
+    except Exception as exc:  # noqa: BLE001 - any failure is "unverified", never fatal
+        return {
+            "verified": False,
+            "reason": f"could not read {repo_id}@{revision}: {type(exc).__name__}: {exc}",
+            "repo_id": repo_id,
+            "revision": revision,
+        }
+
+    present = {sibling.rfilename for sibling in (info.siblings or [])}
+    missing = missing_artifact_kinds(present)
+    return {
+        "verified": not missing,
+        "reason": (
+            f"missing {missing} on the Hub" if missing else "config+weights+tokenizer present"
+        ),
+        "repo_id": repo_id,
+        "revision": revision,
+        "revision_sha": getattr(info, "sha", None),
+        "n_files": len(present),
+        "missing": missing,
+    }
+
+
+def prune_local_checkpoint(
+    run_dir: str | Path | None, verification: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Delete a local run directory — ONLY once its push is verified on the Hub.
+
+    Why this is worth the care: fifteen XLM-R checkpoints at ~1.1 GB is ~16.5 GB
+    against Kaggle's ~19.5 GB working quota, so without pruning Experiment I runs
+    out of disk part-way through. But a disk fix that deletes a checkpoint whose
+    upload did not actually land would recreate `DECISION_REGISTER.md` **M4-6**
+    exactly — a completed training run whose only artefact is gone — and would do
+    it while *looking* like housekeeping.
+
+    So the precondition is `verification["verified"] is True`, which
+    `verify_checkpoint_uploaded` only returns after the Hub has listed a complete
+    checkpoint at that revision. A push that was attempted, skipped, dry-run,
+    partially uploaded, or merely unverifiable leaves the local copy alone.
+    """
+    if run_dir is None:
+        return {"pruned": False, "reason": "no local run directory recorded"}
+
+    path = Path(run_dir)
+    if not verification or not verification.get("verified"):
+        return {
+            "pruned": False,
+            "reason": (
+                "checkpoint upload NOT verified on the Hub — keeping the local copy, "
+                "which may be the only one that exists (M4-6). "
+                f"{(verification or {}).get('reason', 'no verification was performed')}"
+            ),
+            "path": str(path),
+        }
+
+    if not path.exists():
+        return {"pruned": False, "reason": "already absent", "path": str(path)}
+
+    size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    shutil.rmtree(path, ignore_errors=True)
+    return {
+        "pruned": not path.exists(),
+        "reason": f"verified on {verification.get('repo_id')}@{verification.get('revision')}",
+        "path": str(path),
+        "freed_bytes": size,
+        "freed_gb": round(size / 1024**3, 3),
+    }
+
+
+def push_verify_prune(
+    trainer,  # noqa: ANN001
+    tokenizer,  # noqa: ANN001
+    model_config: dict[str, Any],
+    seed: int,
+    *,
+    run_dir: str | Path | None,
+    dry_run: bool = False,
+    branch_suffix: str = "",
+    prune: bool = True,
+) -> dict[str, Any]:
+    """Push one checkpoint, verify it landed, then free the local copy.
+
+    The single path every training experiment takes — C and D's in-domain runs, Q
+    and I alike. It is one function rather than three call sites precisely so the
+    delete-only-if-verified rule cannot hold in one experiment and not another.
+
+    Returns the push dict with `verification` and `prune` attached, so a run's
+    summary records what was uploaded, whether it was confirmed, and whether the
+    local copy was removed.
+    """
+    push_info = push_checkpoint(
+        trainer, tokenizer, model_config, seed, dry_run=dry_run, branch_suffix=branch_suffix
+    )
+
+    if not push_info.get("pushed"):
+        # Dry run, or pushing disabled. Nothing was uploaded, so nothing may be
+        # deleted — the local directory is the only copy there is.
+        push_info["verification"] = {
+            "verified": False,
+            "reason": push_info.get("reason", "checkpoint was not pushed"),
+        }
+        push_info["prune"] = prune_local_checkpoint(
+            run_dir if prune else None, push_info["verification"]
+        )
+        return push_info
+
+    verification = verify_checkpoint_uploaded(
+        push_info["repo_id"], push_info["revision_branch"]
+    )
+    push_info["verification"] = verification
+    print(
+        f"    checkpoint verified: {verification['verified']} "
+        f"({verification.get('reason')})"
+    )
+
+    push_info["prune"] = (
+        prune_local_checkpoint(run_dir, verification)
+        if prune
+        else {"pruned": False, "reason": "pruning disabled by caller"}
+    )
+    if push_info["prune"].get("pruned"):
+        print(f"    freed {push_info['prune']['freed_gb']} GB locally")
+    elif prune:
+        print(f"    local checkpoint KEPT: {push_info['prune']['reason']}")
+
+    return push_info
+
+
 def run_experiment(
     experiment_id: str,
     *,
@@ -796,11 +949,12 @@ def run_experiment(
         )
 
         should_push = push and model_config["checkpoint_push"].get("enabled", False)
-        push_info = push_checkpoint(
+        push_info = push_verify_prune(
             result.pop("trainer"),
             result.pop("tokenizer"),
             model_config,
             seed,
+            run_dir=result["checkpoint_dir"],
             dry_run=bool(dry_run) or not should_push,
         )
         result["push"] = push_info

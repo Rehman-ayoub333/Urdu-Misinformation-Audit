@@ -68,8 +68,8 @@ Both in **Add-ons → Secrets**, attached to this notebook (Colab: 🔑 sidebar)
 | 12 | — | **`CONFIRM_Q = True`** | **Type this into a new cell yourself.** |
 | 13 | c | Experiment Q | 3 fine-tunes. |
 | 14 | — | **`CONFIRM_I = True`** | **Type this into a new cell yourself.** |
-| 15 | e | **Prune checkpoints** | **Do this between c and d** — see §5, this is the most likely way the run dies. |
-| 16 | d | Experiment I | 12 fine-tunes. |
+| 15 | d | Experiment I | 12 fine-tunes. Local checkpoints are pruned automatically as each push is verified (§5.1). |
+| 16 | e | Disk check | Should report **nothing left**. Anything listed is a run whose upload could not be confirmed — read it, don't just delete it. |
 | 17 | f | Summary | The three tables — copy these back. |
 | 18 | g | Package | Pushes + verifies + zips. **Stops the notebook if the Hub cannot confirm.** |
 
@@ -187,24 +187,42 @@ therefore costs only the run in flight.
 
 Neither is quota. Both can kill the run late, which is the expensive way to fail.
 
-### 5.1 Local disk — the most likely failure, and it hits at ~run 12 of 15
+### 5.1 Local disk — handled automatically, but know what the signal looks like
 
-Every training run keeps its best checkpoint under
-`/kaggle/working/repo/checkpoints/<run>/`. Fifteen XLM-R checkpoints at ~1.1 GB is
-**~16.5 GB**, against Kaggle's **~19.5 GB** working-directory quota — before the
-repo, the corpora and anything else. It will be tight, and if it fills, section d
-dies part-way.
+Fifteen XLM-R checkpoints at ~1.1 GB would be **~16.5 GB** against Kaggle's
+**~19.5 GB** working quota, which would have run section d out of disk part-way.
 
-**Mitigation, and please actually do it: run the prune cell (§e) between sections
-c and d, and once more midway through d if you are watching.** It is safe — each
-checkpoint is already on its own Hub branch by the time its run finishes, and the
-Hub copy is the canonical artefact (`REPRODUCIBILITY.md` §6). The cell only removes
-the local duplicate, and it requires you to set `PRUNE = True` so a Run All never
-deletes model files silently.
+**This is now automatic and needs nothing from you.** Each training run deletes its
+own local checkpoint directory as soon as the push to the Hub has been
+**verified** — `push_verify_prune` asks the Hub to list the files at the pushed
+revision and requires config **and** weights **and** tokenizer before removing
+anything, using the same completeness definition
+`inventory_staging_checkpoints.py` audits with. Peak local usage is therefore about
+one checkpoint, not fifteen.
 
-> A cleaner fix is to delete each run directory in the runner immediately after a
-> confirmed push. That is a behaviour change to a code path C and D also use, so it
-> was not made unilaterally — say the word and it is a small change.
+**The precondition is the point.** A disk fix that deleted a checkpoint whose
+upload had not actually landed would recreate M4-6 — a completed training run whose
+only artefact is gone — and would do it while looking like housekeeping. So an
+attempted, skipped, dry-run, partially-uploaded or merely unverifiable push all
+leave the local copy alone, and the run prints:
+
+```
+local checkpoint KEPT: checkpoint upload NOT verified on the Hub — ...
+```
+
+**If you see that line, do not ignore it.** It means that run's model exists only
+in the session's working directory, and the session is ephemeral. Either re-push it
+or download it before the session ends.
+
+Section e lists whatever survived. Anything in that list is a signal, not clutter —
+read the reason before deleting it by hand, and if it never reached the Hub, do not
+delete it at all.
+
+> Sections a and b need no equivalent: they *download* checkpoints (into the shared
+> HF cache, which section b reuses) and run the Trainer inside a
+> `tempfile.TemporaryDirectory`, so they write no persistent local checkpoint state
+> and have nothing to prune. That is asserted by test rather than assumed, so if
+> either ever starts pushing checkpoints the test fails and the prune gets wired in.
 
 ### 5.2 Hugging Face storage for a *private* repo
 

@@ -34,6 +34,11 @@ import yaml
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
 CONFIG_DIR = _ROOT / "research" / "configs"
 
+# The repo root, so the completeness definition below can be imported rather than
+# restated. `checkpoint_artifacts` is standard-library only, which is what keeps
+# this script's dependency surface at huggingface_hub + PyYAML as documented above.
+sys.path.insert(0, str(_ROOT))
+
 # Experiment id -> config file. Mirrors transformer.py's MODEL_CONFIGS, but read
 # from disk here rather than imported, to keep this script's dependency surface to
 # huggingface_hub + PyYAML.
@@ -42,23 +47,16 @@ MODEL_CONFIGS = {"C": "model_mbert.yaml", "D": "model_xlmr.yaml"}
 ENV_HF_TOKEN = "HF_TOKEN"
 ENV_HF_STAGING_PREFIX = "HF_STAGING_PREFIX"
 
-# A branch must carry all three groups to be re-scorable.
-WEIGHT_FILES = ("model.safetensors", "pytorch_model.bin")
-CONFIG_FILES = ("config.json",)
-TOKENIZER_FILES = (
-    "tokenizer.json",
-    "tokenizer_config.json",
-    "sentencepiece.bpe.model",  # XLM-R
-    "vocab.txt",  # mBERT
-    "spiece.model",
+# A branch must carry all three groups to be re-scorable. Imported, not restated:
+# `transformer.py` verifies a push against the SAME definition before deleting the
+# local copy, and a disagreement there would mean deleting a checkpoint this
+# auditor would afterwards call incomplete.
+from research.src.models.checkpoint_artifacts import (  # noqa: E402
+    TOKENIZER_FILES,
+    WEIGHT_FILES,
+    first_present,
+    missing_artifact_kinds,
 )
-
-
-def _first_present(present: set[str], candidates: tuple[str, ...]) -> str | None:
-    for name in candidates:
-        if name in present:
-            return name
-    return None
 
 
 def main() -> int:
@@ -110,9 +108,8 @@ def main() -> int:
                 continue
 
             present = {s.rfilename for s in info.siblings}
-            weights = _first_present(present, WEIGHT_FILES)
-            cfg = _first_present(present, CONFIG_FILES)
-            tok = _first_present(present, TOKENIZER_FILES)
+            weights = first_present(present, WEIGHT_FILES)
+            tok = first_present(present, TOKENIZER_FILES)
 
             size_mb = None
             if weights:
@@ -120,11 +117,7 @@ def main() -> int:
                     if sibling.rfilename == weights and getattr(sibling, "size", None):
                         size_mb = round(sibling.size / 1024**2, 1)
 
-            missing_kinds = [
-                kind
-                for kind, found in (("config", cfg), ("weights", weights), ("tokenizer", tok))
-                if not found
-            ]
+            missing_kinds = missing_artifact_kinds(present)
 
             if missing_kinds:
                 print(f"  seed-{seed:<5} INCOMPLETE — missing {missing_kinds}")
