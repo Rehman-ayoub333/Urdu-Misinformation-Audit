@@ -23,7 +23,7 @@ import json
 import platform
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -336,6 +336,57 @@ def write_predictions(
                 row["score_positive"] = float(score_list[index])
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
     return target
+
+
+# --- Reading and annotating already-written results -----------------------------
+#
+# Ablation experiments (Q, I) are defined by their delta against an uncapped or
+# unablated baseline, so each one has to read a committed counterpart's headline
+# number and record its own delta. Both live here rather than in each runner so
+# there is one implementation of "read a result off disk" and one of "add to a
+# record without disturbing what metrics.py computed".
+
+
+def committed_macro_f1(filename: str, source: Path | None = None) -> float | None:
+    """Read a committed result's macro-F1, or `None` if it is not on disk.
+
+    Deliberately tolerant: an experiment whose baseline has not been run yet must
+    still produce a valid result, recording `null` rather than failing or — far
+    worse — inventing a plausible number (`CLAUDE.md` rule 2).
+    """
+    path = (source or METRICS_DIR) / filename
+    if not path.exists():
+        return None
+    try:
+        return float(json.loads(path.read_text(encoding="utf-8"))["metrics"]["macro_f1"])
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return None
+
+
+def annotate_metrics_file(
+    path: Path, annotate: Callable[[dict[str, Any]], None]
+) -> dict[str, Any]:
+    """Re-open a written metrics file, let the caller add metadata, rewrite it.
+
+    For the facts that genuinely do not exist when `build_metrics_record` runs: a
+    delta needs the record's own macro-F1, and a checkpoint's revision SHA is only
+    assigned once the push completes, which cannot precede training.
+
+    The callback is expected to touch `run_metadata` only. The record is
+    re-validated afterwards, so an annotation that broke the contract cannot
+    survive to disk.
+    """
+    record = json.loads(path.read_text(encoding="utf-8"))
+    annotate(record)
+
+    problems = validate_metrics_record(record)
+    if problems:
+        raise RuntimeError(
+            f"{path.name} violates the metrics contract after annotation: {problems}"
+        )
+
+    path.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
+    return record
 
 
 def validate_metrics_record(record: dict[str, Any]) -> list[str]:

@@ -91,8 +91,8 @@ from typing import Any
 from research.src.data.clean import collapse_whitespace
 from research.src.data.split import load_split_frame
 from research.src.evaluation.metrics import (
-    METRICS_DIR,
-    validate_metrics_record,
+    annotate_metrics_file,
+    committed_macro_f1,
 )
 from research.src.evaluation.results_push import push_result_files
 from research.src.experiments.run_cross_dataset import transfer_metadata
@@ -298,21 +298,6 @@ def in_domain_metrics_filename(seed: int, model_name: str) -> str:
     return f"{IN_DOMAIN_EXPERIMENT_ID}_{model_name}_ax_to_grind_test_seed{seed}.json"
 
 
-def _macro_f1_from(filename: str) -> float | None:
-    """Read a committed result's macro-F1, or `None` if it is not on disk.
-
-    Tolerant by design: a missing counterpart records `null`, never a guess
-    (`CLAUDE.md` rule 2). Same pattern as `run_shortcut_analysis.py`'s H/H2 pair.
-    """
-    path = METRICS_DIR / filename
-    if not path.exists():
-        return None
-    try:
-        return float(json.loads(path.read_text(encoding="utf-8"))["metrics"]["macro_f1"])
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-        return None
-
-
 def comparison_metadata(seed: int, model_name: str) -> dict[str, Any]:
     """Name the runs Q's delta is measured against, and carry their numbers along.
 
@@ -342,7 +327,7 @@ def comparison_metadata(seed: int, model_name: str) -> dict[str, Any]:
                 "seed": seed,
                 "same_direction": True,
                 "same_seed": True,
-                "macro_f1": _macro_f1_from(baseline_file),
+                "macro_f1": committed_macro_f1(baseline_file),
             },
             "in_domain_reference": {
                 "experiment_id": IN_DOMAIN_EXPERIMENT_ID,
@@ -351,7 +336,7 @@ def comparison_metadata(seed: int, model_name: str) -> dict[str, Any]:
                 "dataset": "ax_to_grind",
                 "split": "test",
                 "seed": seed,
-                "macro_f1": _macro_f1_from(in_domain_file),
+                "macro_f1": committed_macro_f1(in_domain_file),
                 "note": (
                     "Context only. D trained on the corpus as released, so it is "
                     "not surface-matched to Q and the two are not a controlled pair."
@@ -381,35 +366,32 @@ def finalise_metrics_file(
     * `checkpoint` needs the revision SHA, which the Hub only assigns once the push
       completes — and the push cannot precede training.
 
-    Nothing computed by `metrics.py` is touched; only `run_metadata` gains fields,
-    and the record is re-validated afterwards so a malformed edit cannot survive.
+    Nothing computed by `metrics.py` is touched; only `run_metadata` gains fields.
+    The read/validate/rewrite cycle itself is `metrics.annotate_metrics_file`,
+    shared with Experiment I.
     """
-    record = json.loads(path.read_text(encoding="utf-8"))
-    metadata = record["run_metadata"]
 
-    comparison = metadata.get("compares_against")
-    if comparison is not None:
-        baseline = comparison["cross_dataset_baseline"]["macro_f1"]
-        comparison["macro_f1_q"] = record["metrics"]["macro_f1"]
-        comparison["delta_macro_f1_q_minus_f"] = (
-            round(record["metrics"]["macro_f1"] - baseline, 6) if baseline is not None else None
-        )
+    def annotate(record: dict[str, Any]) -> None:
+        metadata = record["run_metadata"]
 
-    if push_info and push_info.get("pushed"):
-        metadata["checkpoint"] = {
-            "repo_id": push_info.get("repo_id"),
-            "revision_branch": push_info.get("revision_branch"),
-            "revision_sha": push_info.get("revision_sha"),
-        }
+        comparison = metadata.get("compares_against")
+        if comparison is not None:
+            baseline = comparison["cross_dataset_baseline"]["macro_f1"]
+            comparison["macro_f1_q"] = record["metrics"]["macro_f1"]
+            comparison["delta_macro_f1_q_minus_f"] = (
+                round(record["metrics"]["macro_f1"] - baseline, 6)
+                if baseline is not None
+                else None
+            )
 
-    problems = validate_metrics_record(record)
-    if problems:
-        raise RuntimeError(
-            f"{path.name} violates the metrics contract after annotation: {problems}"
-        )
+        if push_info and push_info.get("pushed"):
+            metadata["checkpoint"] = {
+                "repo_id": push_info.get("repo_id"),
+                "revision_branch": push_info.get("revision_branch"),
+                "revision_sha": push_info.get("revision_sha"),
+            }
 
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False), encoding="utf-8")
-    return record
+    return annotate_metrics_file(path, annotate)
 
 
 # --- Runner -------------------------------------------------------------------
@@ -430,6 +412,7 @@ def run_seed(
     """
     from research.src.models.transformer import (
         EvalTarget,
+        dry_run_slice,
         push_checkpoint,
         train_one_seed,
     )
@@ -445,11 +428,12 @@ def run_seed(
     if dry_run is not None:
         # Slice here rather than leaving it to `train_one_seed`, so the ablation
         # profile recorded in the metadata describes the rows this run actually
-        # trained on. `train_one_seed` re-applies the same `head` and the second
-        # call is a no-op.
-        train = train.head(dry_run.n_train)
-        val = val.head(dry_run.n_eval)
-        target = target.head(dry_run.n_eval)
+        # trained on. `train_one_seed` re-applies the same slice as a no-op.
+        # Balanced, not `head`: the split index sorts fake first, so a plain head
+        # would never exercise the label mapping for both classes.
+        train = dry_run_slice(train, dry_run.n_train)
+        val = dry_run_slice(val, dry_run.n_eval)
+        target = dry_run_slice(target, dry_run.n_eval)
 
     stripped_train = strip_punctuation_frame(train)
     # The selection split is stripped too. D selected its checkpoint on
@@ -565,12 +549,20 @@ def run_punctuation_ablation(
 
 def main(argv: list[str] | None = None) -> int:
     from research.src.models.transformer import (
+        CONFIRM_FLAG,
         DryRunSettings,
         load_config,
+        require_real_run_confirmation,
         resolve_dry_run_destination,
     )
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        CONFIRM_FLAG,
+        action="store_true",
+        dest="confirm_real_run",
+        help="Required for a real (non-dry) run: this trains models and writes committed results.",
+    )
     parser.add_argument("--data-config", default="data.yaml")
     parser.add_argument(
         "--seeds",
@@ -596,6 +588,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--no-push", action="store_true")
     args = parser.parse_args(argv)
+
+    if not args.dry_run and not require_real_run_confirmation(
+        EXPERIMENT_ID, confirmed=args.confirm_real_run
+    ):
+        return 2
 
     data_config = load_config(args.data_config)
     model_config = load_config(MODEL_CONFIG_NAME)

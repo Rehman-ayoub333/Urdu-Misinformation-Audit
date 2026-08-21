@@ -289,6 +289,7 @@ def train_one_seed(
     selection_label: str | None = None,
     eval_targets: list[EvalTarget] | None = None,
     train_split_label: str = "ax_to_grind_train",
+    filename_suffix: str = "",
     extra_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fine-tune one model at one seed and write its metrics.
@@ -311,6 +312,10 @@ def train_one_seed(
         train_split_label: what `run_metadata.train_split` records. It must name
                            the ablation when one was applied, or the file would
                            claim to have trained on the corpus as released.
+        filename_suffix:   appended before `.json`, so an experiment that runs the
+                           same model/split/seed at several settings gets one file
+                           per setting. Experiment I passes `_cap{N}`; the
+                           predictions sibling follows automatically.
         extra_metadata:    merged into `run_metadata` for every written record.
     """
     import torch
@@ -359,12 +364,13 @@ def train_one_seed(
         ]
 
     if dry_run:
-        train_frame = train_frame.head(dry_run.n_train)
+        train_frame = dry_run_slice(train_frame, dry_run.n_train)
         eval_targets = [
-            replace(target, frame=target.frame.head(dry_run.n_eval)) for target in eval_targets
+            replace(target, frame=dry_run_slice(target.frame, dry_run.n_eval))
+            for target in eval_targets
         ]
         if selection_frame is not None:
-            selection_frame = selection_frame.head(dry_run.n_eval)
+            selection_frame = dry_run_slice(selection_frame, dry_run.n_eval)
 
     truncation = truncation_stats(train_frame, tokenizer, max_length)
     print(
@@ -403,7 +409,12 @@ def train_one_seed(
             selection_frame, tokenizer, max_length=max_length, label_to_id=label_to_id
         )
 
-    run_dir = (output_root or CHECKPOINT_DIR) / f"{experiment_id}_{model_config['model']['name']}_seed{seed}"
+    # The suffix is in the directory name too, so an experiment running the same
+    # seed at several settings does not have its runs overwrite each other on disk.
+    run_dir = (
+        (output_root or CHECKPOINT_DIR)
+        / f"{experiment_id}_{model_config['model']['name']}_seed{seed}{filename_suffix}"
+    )
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # transformers 5.x removed `warmup_ratio` in favour of an absolute
@@ -546,7 +557,7 @@ def train_one_seed(
 
         filename = (
             f"{experiment_id}_{model_config['model']['name']}"
-            f"_{target.dataset}_{target.split}_seed{seed}.json"
+            f"_{target.dataset}_{target.split}_seed{seed}{filename_suffix}.json"
         )
         path = write_metrics(record, filename, destination)
         written.append(str(path))
@@ -580,6 +591,69 @@ def train_one_seed(
         "trainer": trainer,
         "tokenizer": tokenizer,
     }
+
+
+def dry_run_slice(frame, n_rows: int):  # noqa: ANN001, ANN201 - pandas DataFrame in/out
+    """Take a LABEL-BALANCED slice of `n_rows` for a dry run.
+
+    A plain `head(n)` is not good enough, and this is not hypothetical: the
+    committed split indices are sorted by `row_id`, and Ax-to-Grind's fake rows
+    sort first, so `head(8)` is **eight `fake` rows and no `real` ones**. A
+    transformer trains on that without complaint (it just learns nothing), but
+    `LinearSVC` raises `"needs samples of at least 2 classes"` — which is how this
+    surfaced, in Experiment I's classical half.
+
+    A single-class dry run is a weak bug-check even where it does not crash: it
+    never exercises the label→id mapping in both directions, never produces a
+    two-class confusion matrix, and cannot catch an inverted label. Balanced costs
+    nothing and checks more.
+
+    Dry-run-only. Real runs use the full split and never come through here.
+    """
+    labels = sorted(frame["label"].unique())
+    if not labels:
+        return frame.head(n_rows)
+
+    per_label = max(1, n_rows // len(labels))
+    taken = [frame.loc[frame["label"] == label].head(per_label) for label in labels]
+
+    import pandas as pd
+
+    return pd.concat(taken).head(n_rows)
+
+
+CONFIRM_FLAG = "--confirm-real-run"
+
+
+def require_real_run_confirmation(experiment_id: str, *, confirmed: bool) -> bool:
+    """Gate a GPU-scale run behind an explicit flag. Returns True if it may proceed.
+
+    The same guard `research/scripts/MILESTONE_5_GPU_HANDOFF.md` puts in front of
+    the notebook's expensive cell (`CONFIRM_EVAL`), applied to the CLI, and for the
+    same stated reason: a stray invocation must not start a multi-hour job.
+
+    It is here because that failure actually happened rather than as a
+    precaution. A unit test asserting that `--mode length-ablation` exits cleanly
+    as an unimplemented mode kept passing that mode after Experiment I was
+    implemented — so instead of returning 2, it started a real run, wrote
+    `I_tfidf_svm_ax_to_grind_test_cap25.json` into `research/results/metrics/` and
+    began fine-tuning XLM-R on a laptop CPU. The test was the immediate bug and is
+    fixed, but nothing structural stopped an accidental caller from producing
+    committed research artefacts, which is what this closes.
+
+    `--dry-run` is deliberately NOT gated: it writes nothing to the results
+    directory, pushes nothing, and exists to be run casually.
+    """
+    if confirmed:
+        return True
+    print(
+        f"Experiment {experiment_id}: refusing to start a real run without "
+        f"{CONFIRM_FLAG}.\n"
+        "  This trains model(s) and writes committed research artefacts into\n"
+        "  research/results/metrics/. Pass --dry-run for the CPU bug-check, or\n"
+        f"  {CONFIRM_FLAG} when you mean it (e.g. from the GPU notebook)."
+    )
+    return False
 
 
 def resolve_dry_run_destination(path: str | Path) -> Path:

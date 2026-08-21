@@ -359,6 +359,39 @@ def test_shortcut_analysis_declares_the_mode_as_implemented() -> None:
     assert PUNCTUATION_ABLATION_MODE not in MILESTONE_5_MODES
 
 
+def test_q_real_run_is_refused_without_explicit_confirmation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same guard as Experiment I's, for the same reason — see M5-5.
+
+    Q is the more expensive of the two (3 seeds of full XLM-R fine-tuning), so an
+    accidental invocation is worse here, not better.
+    """
+    from research.src.experiments import punctuation_ablation
+
+    def explode(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        raise AssertionError("a real run started without confirmation")
+
+    monkeypatch.setattr(punctuation_ablation, "run_punctuation_ablation", explode)
+    monkeypatch.setattr(punctuation_ablation, "run_seed", explode)
+
+    assert punctuation_ablation.main([]) == 2
+
+
+def test_q_confirmed_real_run_is_allowed_through(monkeypatch: pytest.MonkeyPatch) -> None:
+    from research.src.experiments import punctuation_ablation
+
+    called: list[object] = []
+
+    def fake_run(**kwargs):  # noqa: ANN003, ANN202
+        called.append(kwargs["dry_run"])
+        return []
+
+    monkeypatch.setattr(punctuation_ablation, "run_punctuation_ablation", fake_run)
+    assert punctuation_ablation.main(["--confirm-real-run"]) == 0
+    assert called == [None]
+
+
 def test_shortcut_analysis_dispatches_to_the_q_runner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -397,10 +430,22 @@ def test_shortcut_analysis_dispatches_to_the_q_runner(
 
 
 def test_shortcut_analysis_still_refuses_the_unimplemented_modes() -> None:
-    """I and J are not built yet and must keep exiting cleanly rather than half-run."""
+    """J is not built yet and must keep exiting cleanly rather than half-running.
+
+    The mode named here MUST be one that is still in `MILESTONE_5_MODES`, read
+    from the module rather than hardcoded. An earlier version of this test named
+    `length-ablation` literally; when Experiment I was implemented and that mode
+    stopped being a no-op, the test stopped asserting a clean exit and instead
+    **launched a real Experiment I run** — which wrote a metrics file into
+    `research/results/metrics/` and began fine-tuning XLM-R on CPU. Deriving the
+    mode from the module makes that failure impossible to repeat.
+    """
     from research.src.experiments import run_shortcut_analysis
 
-    assert run_shortcut_analysis.main(["--mode", "length-ablation"]) == 2
+    unimplemented = sorted(run_shortcut_analysis.MILESTONE_5_MODES)
+    assert unimplemented, "no unimplemented modes left — delete this test"
+    for mode in unimplemented:
+        assert run_shortcut_analysis.main(["--mode", mode]) == 2
 
 
 def test_torch_is_never_imported_at_module_scope() -> None:

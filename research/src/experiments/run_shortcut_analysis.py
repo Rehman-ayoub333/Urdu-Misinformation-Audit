@@ -1,16 +1,21 @@
-"""Shortcut analysis — Experiments H, H2 (length-only) and Q (punctuation-ablation).
+"""Shortcut analysis — Experiments H, H2 (length-only), Q and I (ablations).
 
-`EXPERIMENT_PLAN.md` Section 2 steps 2, 2b and 4b. The remaining modes listed in
-that table (`length-ablation` = I, `length-buckets` = J) require trained
-transformer checkpoints and belong to Milestones 5/5.5; they are declared in the
-CLI so the surface matches the plan, and exit cleanly rather than pretending.
+`EXPERIMENT_PLAN.md` Section 2 steps 2, 2b, 4b and 5. The one remaining mode in
+that table (`length-buckets` = J) belongs to Milestone 5.5; it is declared in the
+CLI so the surface matches the plan, and exits cleanly rather than pretending.
 
-`--mode punctuation-ablation` retrains XLM-R on a punctuation-stripped copy of
-Ax-to-Grind and re-runs Experiment F's zero-shot evaluation on Notri-Fact
-(`DECISION_REGISTER.md` M2-3). It is a **GPU-scale** run, unlike H/H2 — the
-implementation and the ablation itself live in
-`research/src/experiments/punctuation_ablation.py`, which this module dispatches
-to rather than duplicating.
+Two of the four modes are **GPU-scale**, unlike H/H2, and each lives in its own
+module that this one dispatches to rather than duplicating:
+
+* `--mode punctuation-ablation` → **Q**, `punctuation_ablation.py`. Retrains XLM-R
+  on a punctuation-stripped copy of Ax-to-Grind and re-runs Experiment F's
+  zero-shot evaluation on Notri-Fact (`DECISION_REGISTER.md` M2-3).
+* `--mode length-ablation` → **I**, `length_ablation.py`. Retrains XLM-R and the
+  best classical baseline on word-capped Ax-to-Grind and re-evaluates in-domain,
+  sweeping `{25, 50, 100, 200}` with 50 as the replication point.
+
+Both ablations are applied on top of `clean.py`'s output and neither is allowed
+into it (`CLAUDE.md` rule 4).
 
 **What `--mode length-only` measures.** A model over article length features alone
 — no words, no vocabulary, no content of any kind. Its macro-F1 is how much of
@@ -38,6 +43,8 @@ Usage:
         --classifier decision_tree
     python -m research.src.experiments.run_shortcut_analysis \\
         --mode punctuation-ablation --dry-run
+    python -m research.src.experiments.run_shortcut_analysis \\
+        --mode length-ablation --dry-run
 """
 
 from __future__ import annotations
@@ -70,15 +77,16 @@ _ROOT = Path(__file__).resolve().parents[3]
 CONFIG_DIR = _ROOT / "research" / "configs"
 
 MILESTONE_5_MODES = {
-    "length-ablation": "Experiment I — needs a trained checkpoint (Milestone 5)",
     "length-buckets": "Experiment J — needs trained checkpoints (Milestone 5.5)",
 }
 
 # Modes that fine-tune a transformer rather than fitting a cheap classical model.
 # Dispatched to their own module and given their own flags, because the arguments
-# a GPU run needs (seeds, dry run, checkpoint push) have nothing in common with
-# H/H2's.
+# a GPU run needs (seeds, caps, dry run, checkpoint push) have nothing in common
+# with H/H2's.
 PUNCTUATION_ABLATION_MODE = "punctuation-ablation"
+LENGTH_ABLATION_MODE = "length-ablation"
+GPU_MODES = (PUNCTUATION_ABLATION_MODE, LENGTH_ABLATION_MODE)
 
 
 def load_config(name: str) -> dict[str, Any]:
@@ -301,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mode",
         required=True,
-        choices=["length-only", PUNCTUATION_ABLATION_MODE, *MILESTONE_5_MODES],
+        choices=["length-only", *GPU_MODES, *MILESTONE_5_MODES],
     )
     parser.add_argument(
         "--classifier",
@@ -316,23 +324,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", default="ax_to_grind")
     parser.add_argument("--data-config", default="data.yaml")
     parser.add_argument("--model-config", default="model_classical.yaml")
-    # --- punctuation-ablation (Q) only; ignored by the length-only modes ---
+    # --- GPU modes (Q, I) only; ignored by the length-only modes ---
     parser.add_argument("--seeds", nargs="+", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--dry-run-output-dir", default=None)
     parser.add_argument("--no-push", action="store_true")
+    parser.add_argument(
+        "--confirm-real-run",
+        action="store_true",
+        help=(
+            "Required by the GPU modes (Q, I) for a real run. Without it they "
+            "print what they would do and exit 2 — a stray invocation must not "
+            "start a multi-hour job or write committed results."
+        ),
+    )
+    # --- length-ablation (I) only ---
+    parser.add_argument("--caps", nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--ablation-models", default="all", choices=["classical", "transformer", "all"]
+    )
     args = parser.parse_args(argv)
 
     if args.mode in MILESTONE_5_MODES:
         print(f"--mode {args.mode} is not implemented yet: {MILESTONE_5_MODES[args.mode]}")
         return 2
 
-    if args.mode == PUNCTUATION_ABLATION_MODE:
-        # Imported here, not at module scope: torch is needed for Q but must not
-        # become a requirement for running H/H2, which fit in seconds on a CPU
+    if args.mode in GPU_MODES:
+        # Imported here, not at module scope: torch is needed for Q and I but must
+        # not become a requirement for running H/H2, which fit in seconds on a CPU
         # with scikit-learn alone.
-        from research.src.experiments.punctuation_ablation import main as punctuation_main
-
         passthrough = ["--data-config", args.data_config]
         if args.seeds:
             passthrough += ["--seeds", *[str(seed) for seed in args.seeds]]
@@ -342,7 +362,19 @@ def main(argv: list[str] | None = None) -> int:
             passthrough += ["--dry-run-output-dir", args.dry_run_output_dir]
         if args.no_push:
             passthrough.append("--no-push")
-        return punctuation_main(passthrough)
+        if args.confirm_real_run:
+            passthrough.append("--confirm-real-run")
+
+        if args.mode == PUNCTUATION_ABLATION_MODE:
+            from research.src.experiments.punctuation_ablation import main as ablation_main
+        else:
+            from research.src.experiments.length_ablation import main as ablation_main
+
+            if args.caps:
+                passthrough += ["--caps", *[str(cap) for cap in args.caps]]
+            passthrough += ["--models", args.ablation_models]
+
+        return ablation_main(passthrough)
 
     data_config = load_config(args.data_config)
     model_config = load_config(args.model_config)
